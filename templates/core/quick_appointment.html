@@ -1,0 +1,457 @@
+{% extends "core/base.html" %}
+{% block title %}Tez qabul - MedCenter{% endblock %}
+{% block page_title %}Tez qabul{% endblock %}
+
+{% block extra_css %}
+<style>
+    .step-indicator {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        margin-bottom: 2rem;
+        flex-wrap: nowrap;
+    }
+    .step-dot {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #e8f0fe;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+        flex-shrink: 0;
+        position: relative;
+        z-index: 1;
+    }
+    .step-dot.active { background: #0d6efd; color: #fff; }
+    .step-dot.done { background: #198754; color: #fff; }
+    .step-line {
+        flex: 1;
+        height: 3px;
+        background: #e8f0fe;
+        transition: background 0.3s;
+        min-width: 20px;
+        max-width: 60px;
+    }
+    .step-line.done { background: #198754; }
+
+    .step-label {
+        font-size: 0.7rem;
+        color: #6c757d;
+        text-align: center;
+        margin-top: 4px;
+        line-height: 1.2;
+    }
+    .step-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .doctor-card {
+        border: 2px solid #e8f0fe;
+        border-radius: 12px;
+        padding: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #fff;
+    }
+    .doctor-card:hover { border-color: #0d6efd; box-shadow: 0 4px 12px rgba(13,110,253,0.1); }
+    .doctor-card.selected { border-color: #0d6efd; background: #f0f4ff; }
+
+    .service-card {
+        border: 2px solid #e8f0fe;
+        border-radius: 10px;
+        padding: 12px 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #fff;
+    }
+    .service-card:hover { border-color: #0d6efd; background: #f8fbff; }
+    .service-card.selected { border-color: #0d6efd; background: #f0f4ff; }
+
+    .step-section { display: none; }
+    .step-section.active { display: block; }
+
+    .form-control, .form-select {
+        border-radius: 10px;
+        border: 2px solid #e8f0fe;
+        padding: 10px 14px;
+        font-size: 0.95rem;
+        transition: border-color 0.2s;
+    }
+    .form-control:focus, .form-select:focus {
+        border-color: #0d6efd;
+        box-shadow: 0 0 0 3px rgba(13,110,253,0.1);
+    }
+    .btn-primary { border-radius: 10px; padding: 11px 28px; font-weight: 600; }
+    .btn-outline-secondary { border-radius: 10px; padding: 11px 20px; }
+
+    .specialty-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        border: 2px solid #e8f0fe;
+        border-radius: 12px;
+        padding: 12px 16px;
+        background: #fff;
+        cursor: pointer;
+        transition: all 0.2s;
+        text-align: left;
+        width: 100%;
+        font-size: 0.95rem;
+    }
+    .specialty-btn:hover { border-color: #0d6efd; background: #f0f4ff; }
+    .specialty-btn.selected { border-color: #0d6efd; background: #0d6efd; color: #fff; }
+    .specialty-btn .sp-icon {
+        width: 40px; height: 40px;
+        border-radius: 10px;
+        background: #e8f0fe;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        transition: background 0.2s;
+    }
+    .specialty-btn.selected .sp-icon { background: rgba(255,255,255,0.2); }
+
+    .loader-spinner {
+        display: flex; align-items: center; gap: 8px;
+        color: #6c757d; font-size: 0.9rem; padding: 10px;
+    }
+    .spin { animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    @media (max-width: 576px) {
+        .step-label { font-size: 0.6rem; }
+        .step-dot { width: 30px; height: 30px; font-size: 0.8rem; }
+        .doctor-card { padding: 10px; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-12 col-sm-11 col-md-9 col-lg-7 col-xl-6">
+        <div class="card card-custom p-3 p-md-4">
+
+            <!-- Header -->
+            <div class="text-center mb-3">
+                <div class="rounded-circle bg-warning bg-opacity-10 d-inline-flex align-items-center justify-content-center mb-2" style="width:64px;height:64px;">
+                    <i class="bi bi-lightning-charge fs-2 text-warning"></i>
+                </div>
+                <h5 class="mb-1 fw-bold">1 klikda qabul</h5>
+                <p class="text-muted small mb-0">Bemor ma'lumotlarini kiriting va navbatga qo'shing</p>
+            </div>
+
+            <!-- Step indicators -->
+            <div class="step-indicator mb-4">
+                <div class="step-wrapper">
+                    <div class="step-dot active" id="dot1">1</div>
+                    <div class="step-label">Bemor</div>
+                </div>
+                <div class="step-line" id="line1"></div>
+                <div class="step-wrapper">
+                    <div class="step-dot" id="dot2">2</div>
+                    <div class="step-label">Yo'nalish</div>
+                </div>
+                <div class="step-line" id="line2"></div>
+                <div class="step-wrapper">
+                    <div class="step-dot" id="dot3">3</div>
+                    <div class="step-label">Shifokor</div>
+                </div>
+                <div class="step-line" id="line3"></div>
+                <div class="step-wrapper">
+                    <div class="step-dot" id="dot4">4</div>
+                    <div class="step-label">Xizmat</div>
+                </div>
+            </div>
+
+            <form method="post" id="quickForm">
+                {% csrf_token %}
+
+                <!-- Step 1: Bemor ma'lumotlari -->
+                <div class="step-section active" id="step1">
+                    <h6 class="fw-semibold mb-3">
+                        <span class="badge bg-primary rounded-pill me-2">1</span> Bemor ma'lumotlari
+                    </h6>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">Telefon raqami <span class="text-danger">*</span></label>
+                        {{ form.phone }}
+                        <div id="phone-search-result" class="mt-1"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">F.I.O <span class="text-danger">*</span></label>
+                        {{ form.full_name }}
+                    </div>
+                    <div class="d-flex justify-content-end">
+                        <button type="button" class="btn btn-primary" id="toStep2Btn">
+                            Keyingisi <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 2: Yo'nalish tanlash -->
+                <div class="step-section" id="step2">
+                    <h6 class="fw-semibold mb-3">
+                        <span class="badge bg-primary rounded-pill me-2">2</span> Yo'nalishni tanlang
+                    </h6>
+                    <div class="row g-2" id="specialtyList">
+                        {% for sp in specialties %}
+                        <div class="col-6 col-sm-4">
+                            <button type="button" class="specialty-btn" data-sp-id="{{ sp.pk }}" onclick="selectSpecialty({{ sp.pk }}, '{{ sp.name|escapejs }}')">
+                                <div class="sp-icon"><i class="bi bi-heart-pulse"></i></div>
+                                <span>{{ sp.name }}</span>
+                            </button>
+                        </div>
+                        {% empty %}
+                        <div class="col-12">
+                            <p class="text-muted">Yo'nalishlar topilmadi</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <div class="d-flex justify-content-between mt-3">
+                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)">
+                            <i class="bi bi-arrow-left me-1"></i> Orqaga
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 3: Shifokor tanlash -->
+                <div class="step-section" id="step3">
+                    <h6 class="fw-semibold mb-3">
+                        <span class="badge bg-primary rounded-pill me-2">3</span>
+                        Shifokorni tanlang
+                        <span id="selectedSpecialtyName" class="badge bg-secondary ms-1 fw-normal"></span>
+                    </h6>
+                    <div id="doctorListContainer">
+                        <div class="loader-spinner">
+                            <i class="bi bi-arrow-repeat spin"></i> Yuklanmoqda...
+                        </div>
+                    </div>
+                    <input type="hidden" name="doctor" id="selectedDoctorInput">
+                    <div class="d-flex justify-content-between mt-3">
+                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)">
+                            <i class="bi bi-arrow-left me-1"></i> Orqaga
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Step 4: Xizmat tanlash -->
+                <div class="step-section" id="step4">
+                    <h6 class="fw-semibold mb-3">
+                        <span class="badge bg-primary rounded-pill me-2">4</span>
+                        Xizmatni tanlang
+                        <span class="text-muted fw-normal small">(ixtiyoriy)</span>
+                    </h6>
+                    <div id="serviceListContainer">
+                        <div class="loader-spinner">
+                            <i class="bi bi-arrow-repeat spin"></i> Yuklanmoqda...
+                        </div>
+                    </div>
+                    <input type="hidden" name="service" id="selectedServiceInput">
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <button type="button" class="btn btn-outline-secondary" onclick="goToStep(3)">
+                            <i class="bi bi-arrow-left me-1"></i> Orqaga
+                        </button>
+                        <button type="submit" class="btn btn-warning px-4 fw-semibold">
+                            <i class="bi bi-lightning-charge me-1"></i> Navbatga qo'shish!
+                        </button>
+                    </div>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentStep = 1;
+let selectedSpecialtyId = null;
+let selectedDoctorId = null;
+let selectedServiceId = null;
+
+// Phone autofill
+document.querySelector('[name="phone"]').addEventListener('input', function() {
+    const phone = this.value;
+    if (phone.length >= 5) {
+        fetch('{% url "patient_search_api" %}?q=' + encodeURIComponent(phone))
+            .then(r => r.json())
+            .then(data => {
+                const div = document.getElementById('phone-search-result');
+                if (data.results.length > 0) {
+                    const p = data.results[0];
+                    div.innerHTML = '<div class="alert alert-info py-1 px-2 mb-0 rounded-3">' +
+                        '<i class="bi bi-check-circle me-1"></i><small>Topildi: <strong>' + p.name + '</strong> (' + p.phone + ')</small></div>';
+                    document.querySelector('[name="full_name"]').value = p.name;
+                } else {
+                    div.innerHTML = '<small class="text-muted"><i class="bi bi-person-plus me-1"></i>Yangi bemor sifatida qo\'shiladi</small>';
+                }
+            });
+    }
+});
+
+document.getElementById('toStep2Btn').addEventListener('click', function() {
+    const phone = document.querySelector('[name="phone"]').value.trim();
+    const name = document.querySelector('[name="full_name"]').value.trim();
+    if (!phone || !name) {
+        alert("Telefon va F.I.O ni kiriting!");
+        return;
+    }
+    goToStep(2);
+});
+
+function goToStep(n) {
+    document.querySelectorAll('.step-section').forEach((s, i) => {
+        s.classList.toggle('active', i + 1 === n);
+    });
+    currentStep = n;
+    updateStepUI();
+}
+
+function updateStepUI() {
+    for (let i = 1; i <= 4; i++) {
+        const dot = document.getElementById('dot' + i);
+        dot.classList.remove('active', 'done');
+        if (i < currentStep) dot.classList.add('done');
+        else if (i === currentStep) dot.classList.add('active');
+    }
+    for (let i = 1; i <= 3; i++) {
+        const line = document.getElementById('line' + i);
+        line.classList.toggle('done', i < currentStep);
+    }
+}
+
+function selectSpecialty(spId, spName) {
+    selectedSpecialtyId = spId;
+    document.querySelectorAll('.specialty-btn').forEach(b => b.classList.remove('selected'));
+    const btn = document.querySelector(`.specialty-btn[data-sp-id="${spId}"]`);
+    if (btn) btn.classList.add('selected');
+    document.getElementById('selectedSpecialtyName').textContent = spName;
+
+    loadDoctors(spId);
+    goToStep(3);
+}
+
+function loadDoctors(spId) {
+    const container = document.getElementById('doctorListContainer');
+    container.innerHTML = '<div class="loader-spinner"><i class="bi bi-arrow-repeat spin"></i> Shifokorlar yuklanmoqda...</div>';
+    selectedDoctorId = null;
+    document.getElementById('selectedDoctorInput').value = '';
+
+    fetch(`/api/specialties/${spId}/doctors/`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.doctors.length === 0) {
+                container.innerHTML = '<div class="alert alert-warning"><i class="bi bi-exclamation-circle me-2"></i>Bu yo\'nalishda shifokor topilmadi.</div>';
+                return;
+            }
+            container.innerHTML = '<div class="row g-2">' + data.doctors.map(d => `
+                <div class="col-12 col-sm-6">
+                    <div class="doctor-card" data-doctor-id="${d.id}" onclick="selectDoctor(${d.id}, '${escapeHtml(d.name)}')">
+                        <div class="d-flex align-items-center gap-2">
+                            <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center flex-shrink-0" style="width:44px;height:44px;">
+                                <i class="bi bi-person-badge text-primary fs-5"></i>
+                            </div>
+                            <div class="flex-grow-1 min-width-0">
+                                <div class="fw-semibold text-truncate">Dr. ${escapeHtml(d.name)}</div>
+                                <small class="text-muted">
+                                    <i class="bi bi-clock"></i> ${d.work_start}-${d.work_end}
+                                    &nbsp;|&nbsp;<i class="bi bi-door-open"></i> ${escapeHtml(d.room)}
+                                </small>
+                            </div>
+                            <span class="badge ${d.available ? 'bg-success' : 'bg-danger'} flex-shrink-0">
+                                ${d.available ? 'Bo\'sh' : 'Band'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            `).join('') + '</div>';
+        })
+        .catch(() => {
+            container.innerHTML = '<div class="alert alert-danger">Xato yuz berdi. Qayta urinib ko\'ring.</div>';
+        });
+}
+
+function selectDoctor(docId, docName) {
+    selectedDoctorId = docId;
+    document.getElementById('selectedDoctorInput').value = docId;
+    document.querySelectorAll('.doctor-card').forEach(c => c.classList.remove('selected'));
+    const card = document.querySelector(`.doctor-card[data-doctor-id="${docId}"]`);
+    if (card) card.classList.add('selected');
+
+    loadServices(selectedSpecialtyId);
+    setTimeout(() => goToStep(4), 200);
+}
+
+function loadServices(spId) {
+    const container = document.getElementById('serviceListContainer');
+    container.innerHTML = '<div class="loader-spinner"><i class="bi bi-arrow-repeat spin"></i> Xizmatlar yuklanmoqda...</div>';
+    selectedServiceId = null;
+    document.getElementById('selectedServiceInput').value = '';
+
+    fetch(`/api/specialties/${spId}/services/`)
+        .then(r => r.json())
+        .then(data => {
+            let html = '';
+            if (data.services.length === 0) {
+                html = '<div class="alert alert-info"><i class="bi bi-info-circle me-2"></i>Bu yo\'nalishda xizmatlar topilmadi. Xizmatsiz davom etishingiz mumkin.</div>';
+            } else {
+                html = '<div class="row g-2">' + data.services.map(s => `
+                    <div class="col-12 col-sm-6">
+                        <div class="service-card" data-service-id="${s.id}" onclick="selectService(${s.id})">
+                            <div class="d-flex align-items-center justify-content-between gap-2">
+                                <div class="min-width-0">
+                                    <div class="fw-medium text-truncate">${escapeHtml(s.name)}</div>
+                                    <small class="text-muted">
+                                        <i class="bi bi-clock"></i> ${s.duration} daqiqa
+                                    </small>
+                                </div>
+                                <div class="text-primary fw-semibold flex-shrink-0">${formatPrice(s.price)} so'm</div>
+                            </div>
+                        </div>
+                    </div>
+                `).join('') + '</div>';
+            }
+            html += '<div class="mt-2"><small class="text-muted"><i class="bi bi-info-circle me-1"></i>Xizmat tanlamasangiz ham davom etishingiz mumkin.</small></div>';
+            container.innerHTML = html;
+        })
+        .catch(() => {
+            container.innerHTML = '<div class="alert alert-danger">Xato yuz berdi.</div>';
+        });
+}
+
+function selectService(svcId) {
+    if (selectedServiceId === svcId) {
+        selectedServiceId = null;
+        document.getElementById('selectedServiceInput').value = '';
+        document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+        return;
+    }
+    selectedServiceId = svcId;
+    document.getElementById('selectedServiceInput').value = svcId;
+    document.querySelectorAll('.service-card').forEach(c => c.classList.remove('selected'));
+    const card = document.querySelector(`.service-card[data-service-id="${svcId}"]`);
+    if (card) card.classList.add('selected');
+}
+
+function escapeHtml(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+}
+
+function formatPrice(priceStr) {
+    const n = parseFloat(priceStr);
+    return n.toLocaleString('uz-UZ');
+}
+</script>
+{% endblock %}

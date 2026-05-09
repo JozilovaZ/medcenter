@@ -1,0 +1,153 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}Statistika - MedCenter{% endblock %}
+{% block page_title %}Statistika paneli{% endblock %}
+
+{% block content %}
+<!-- Top Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="label">Oylik daromad</div>
+                    <div class="value text-success">{{ monthly_revenue|intcomma }}</div>
+                    <small class="text-muted">so'm</small>
+                </div>
+                <div class="icon bg-success bg-opacity-10 text-success"><i class="bi bi-cash-stack"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="label">Jami bemorlar</div>
+                    <div class="value text-primary">{{ total_patients }}</div>
+                </div>
+                <div class="icon bg-primary bg-opacity-10 text-primary"><i class="bi bi-people"></i></div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="label">Oylik qabullar</div>
+                    <div class="value text-info">{{ total_appointments_month }}</div>
+                </div>
+                <div class="icon bg-info bg-opacity-10 text-info"><i class="bi bi-calendar-check"></i></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Daily Chart -->
+    <div class="col-md-8">
+        <div class="card card-custom p-3">
+            <h6><i class="bi bi-bar-chart text-primary"></i> Oxirgi 30 kunlik statistika</h6>
+            <div style="overflow-x: auto;">
+                <div class="d-flex align-items-end gap-1 mt-3" style="min-width: 600px; height: 200px;">
+                    {% for stat in daily_stats %}
+                    <div class="text-center flex-fill">
+                        <div style="height: {{ stat.appointments|default:0 }}0px; max-height: 180px; background: linear-gradient(180deg, #0d6efd, #3b82f6); border-radius: 4px 4px 0 0; min-height: 2px;"
+                             title="{{ stat.date }}: {{ stat.appointments }} qabul, {{ stat.revenue|intcomma }} so'm"></div>
+                        <small class="text-muted" style="font-size: 0.6rem;">{{ stat.date }}</small>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Peak Hours -->
+    <div class="col-md-4">
+        <div class="card card-custom p-3">
+            <h6><i class="bi bi-clock text-warning"></i> Eng band vaqtlar</h6>
+            {% for hour in peak_hours %}
+            <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background: #f8f9fa;">
+                <span><i class="bi bi-clock"></i> {{ hour.hour }}</span>
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: {{ hour.count }}0px; max-width: 80px; height: 8px; background: #ffc107; border-radius: 4px;"></div>
+                    <strong>{{ hour.count }}</strong>
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted text-center">Ma'lumot yo'q</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Top Doctors -->
+    <div class="col-md-6">
+        <div class="card card-custom p-3">
+            <h6><i class="bi bi-person-badge text-success"></i> Eng faol shifokorlar (oy)</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>#</th><th>Shifokor</th><th>Qabullar</th><th>Daromad</th></tr></thead>
+                    <tbody>
+                    {% for doc in top_doctors %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><strong>Dr. {{ doc.full_name }}</strong></td>
+                        <td><span class="badge bg-primary">{{ doc.apt_count|default:0 }}</span></td>
+                        <td class="text-success">{{ doc.revenue|default:0|intcomma }} so'm</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Services -->
+    <div class="col-md-6">
+        <div class="card card-custom p-3">
+            <h6><i class="bi bi-box-seam text-info"></i> Eng ko'p ishlatiladigan xizmatlar</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>#</th><th>Xizmat</th><th>Foydalanish</th><th>Daromad</th></tr></thead>
+                    <tbody>
+                    {% for svc in top_services %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><strong>{{ svc.name }}</strong></td>
+                        <td><span class="badge bg-info">{{ svc.usage|default:0 }}</span></td>
+                        <td class="text-success">{{ svc.revenue|default:0|intcomma }} so'm</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- No-show patients -->
+{% if no_show_patients %}
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card card-custom p-3">
+            <h6><i class="bi bi-person-x text-danger"></i> Ko'p kelmaydigan bemorlar</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>Bemor</th><th>Telefon</th><th>Kelmagan</th></tr></thead>
+                    <tbody>
+                    {% for p in no_show_patients %}
+                    <tr>
+                        <td><a href="{% url 'patient_detail' p.pk %}">{{ p.full_name }}</a></td>
+                        <td>{{ p.phone }}</td>
+                        <td><span class="badge bg-danger">{{ p.no_show_count }} marta</span></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

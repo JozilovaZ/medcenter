@@ -1,0 +1,99 @@
+{% extends "core/base.html" %}
+{% block title %}Navbat - MedCenter{% endblock %}
+{% block page_title %}Navbat boshqaruvi{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="d-flex gap-3">
+        <span class="badge fs-6" style="background:#0d6efd;color:#fff;">Kutmoqda: {{ waiting.count }}</span>
+        <span class="badge fs-6" style="background:#e8f0fe;color:#0d6efd;">Chaqirilgan: {{ called.count }}</span>
+        <span class="badge fs-6" style="background:#0a58ca;color:#fff;">Qabulda: {{ in_progress.count }}</span>
+        <span class="badge fs-6" style="background:#f0f4ff;color:#0d6efd;">Yakunlangan: {{ completed.count }}</span>
+    </div>
+    <a href="{% url 'queue_display' %}" class="btn btn-dark" target="_blank">
+        <i class="bi bi-tv"></i> TV Monitor
+    </a>
+</div>
+
+<div class="row g-3">
+    <!-- Waiting -->
+    <div class="col-md-4">
+        <div class="card card-custom">
+            <div class="card-header" style="background: #0d6efd; color: #fff;"><i class="bi bi-hourglass-split"></i> Kutmoqda</div>
+            <div class="card-body p-2">
+                {% for q in waiting %}
+                <div class="border rounded p-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="queue-ticket" style="font-size: 1.5rem;">{{ q.ticket_number }}</span>
+                        <span class="badge bg-secondary">#{{ q.position_in_queue }}</span>
+                    </div>
+                    <div><strong>{{ q.patient.full_name }}</strong></div>
+                    <div class="text-muted"><small>Dr. {{ q.doctor.full_name }} | Xona: {{ q.doctor.room_number }}</small></div>
+                    <div class="mt-1 d-flex gap-1">
+                        <a href="{% url 'queue_status_update' q.pk 'called' %}" class="btn btn-sm btn-info flex-fill">Chaqirish</a>
+                        <a href="{% url 'queue_status_update' q.pk 'skipped' %}" class="btn btn-sm btn-outline-secondary flex-fill">O'tkazish</a>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center p-3">Bo'sh</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Called -->
+    <div class="col-md-4">
+        <div class="card card-custom">
+            <div class="card-header" style="background: #e8f0fe; color: #0d6efd;"><i class="bi bi-megaphone"></i> Chaqirilgan</div>
+            <div class="card-body p-2">
+                {% for q in called %}
+                <div class="border rounded p-2 mb-2 pulse">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="queue-ticket" style="font-size: 1.5rem;">{{ q.ticket_number }}</span>
+                        <i class="bi bi-arrow-right-circle fs-4 text-info"></i>
+                    </div>
+                    <div><strong>{{ q.patient.full_name }}</strong></div>
+                    <div class="text-muted"><small>Dr. {{ q.doctor.full_name }} | Xona: {{ q.doctor.room_number }}</small></div>
+                    <div class="mt-1">
+                        <a href="{% url 'queue_status_update' q.pk 'in_progress' %}" class="btn btn-sm btn-primary w-100">Qabulni boshlash</a>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center p-3">Bo'sh</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- In Progress -->
+    <div class="col-md-4">
+        <div class="card card-custom">
+            <div class="card-header" style="background: #0a58ca; color: #fff;"><i class="bi bi-play-circle"></i> Qabulda</div>
+            <div class="card-body p-2">
+                {% for q in in_progress %}
+                <div class="border rounded p-2 mb-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="queue-ticket" style="font-size: 1.5rem;">{{ q.ticket_number }}</span>
+                        <i class="bi bi-person-check fs-4 text-primary"></i>
+                    </div>
+                    <div><strong>{{ q.patient.full_name }}</strong></div>
+                    <div class="text-muted"><small>Dr. {{ q.doctor.full_name }} | Xona: {{ q.doctor.room_number }}</small></div>
+                    <div class="mt-1">
+                        <a href="{% url 'queue_status_update' q.pk 'completed' %}" class="btn btn-sm btn-success w-100">Yakunlash</a>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-muted text-center p-3">Bo'sh</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh every 10 seconds
+setTimeout(() => location.reload(), 10000);
+</script>
+{% endblock %}

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ro'yxatdan o'tish - MedCenter</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #1a1d3a 0%, #0d6efd 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center;
+            padding: 20px 0;
+        }
+        .register-card {
+            background: #fff; border-radius: 20px; padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 500px; width: 100%;
+        }
+        .register-card .brand { text-align: center; margin-bottom: 25px; }
+        .register-card .brand i { font-size: 3rem; color: #0d6efd; }
+        .register-card .brand h2 { color: #1a1d3a; margin-top: 10px; }
+        .role-selector { display: flex; gap: 15px; margin-bottom: 20px; }
+        .role-card {
+            flex: 1; padding: 20px; border: 2px solid #e9ecef; border-radius: 12px;
+            text-align: center; cursor: pointer; transition: all 0.3s;
+        }
+        .role-card:hover { border-color: #0d6efd; background: #f0f4ff; }
+        .role-card.active { border-color: #0d6efd; background: #e8f0fe; }
+        .role-card i { font-size: 2.5rem; display: block; margin-bottom: 8px; }
+        .role-card.patient-card i { color: #28a745; }
+        .role-card.doctor-card i { color: #0d6efd; }
+        .role-card input[type="radio"] { display: none; }
+        .doctor-fields { display: none; }
+        .doctor-fields.show { display: block; }
+    </style>
+</head>
+<body>
+    <div class="register-card">
+        <div class="brand">
+            <i class="bi bi-hospital"></i>
+            <h2>MedCenter</h2>
+            <p class="text-muted">Ro'yxatdan o'tish</p>
+        </div>
+
+        {% if form.errors %}
+        <div class="alert alert-danger">
+            {% for error in form.non_field_errors %}
+                {{ error }}<br>
+            {% endfor %}
+            {% for field in form %}
+                {% for error in field.errors %}
+                    {{ field.label }}: {{ error }}<br>
+                {% endfor %}
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+
+            <!-- Rol tanlash -->
+            <label class="form-label fw-bold">Siz kimsiz?</label>
+            <div class="role-selector">
+                <label class="role-card patient-card active" id="card-patient">
+                    <input type="radio" name="role" value="patient" checked>
+                    <i class="bi bi-person-heart"></i>
+                    <strong>Bemor</strong>
+                    <small class="d-block text-muted">Davolanish uchun</small>
+                </label>
+                <label class="role-card doctor-card" id="card-doctor">
+                    <input type="radio" name="role" value="doctor">
+                    <i class="bi bi-person-badge"></i>
+                    <strong>Shifokor</strong>
+                    <small class="d-block text-muted">Bemorlarni qabul qilish</small>
+                </label>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-6">
+                    <label class="form-label">Ism *</label>
+                    {{ form.first_name }}
+                </div>
+                <div class="col-6">
+                    <label class="form-label">Familiya *</label>
+                    {{ form.last_name }}
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Telefon raqam *</label>
+                    {{ form.phone }}
+                    <small class="text-muted">Bu sizning login bo'ladi</small>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Jinsi *</label>
+                    {{ form.gender }}
+                </div>
+
+                <!-- Shifokor uchun qo'shimcha -->
+                <div class="col-12 doctor-fields" id="doctor-fields">
+                    <label class="form-label">Mutaxassislik *</label>
+                    {{ form.specialty }}
+                </div>
+
+                <div class="col-6">
+                    <label class="form-label">Parol *</label>
+                    {{ form.password }}
+                </div>
+                <div class="col-6">
+                    <label class="form-label">Parolni tasdiqlang *</label>
+                    {{ form.password_confirm }}
+                </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-2 mt-4">
+                <i class="bi bi-person-plus"></i> Ro'yxatdan o'tish
+            </button>
+
+            <div class="text-center mt-3">
+                <span class="text-muted">Hisobingiz bormi?</span>
+                <a href="{% url 'login' %}" class="fw-bold">Kirish</a>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        const cardPatient = document.getElementById('card-patient');
+        const cardDoctor = document.getElementById('card-doctor');
+        const doctorFields = document.getElementById('doctor-fields');
+
+        cardPatient.addEventListener('click', function() {
+            cardPatient.classList.add('active');
+            cardDoctor.classList.remove('active');
+            doctorFields.classList.remove('show');
+        });
+
+        cardDoctor.addEventListener('click', function() {
+            cardDoctor.classList.add('active');
+            cardPatient.classList.remove('active');
+            doctorFields.classList.add('show');
+        });
+    </script>
+</body>
+</html>

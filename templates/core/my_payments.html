@@ -1,0 +1,110 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}Mening to'lovlarim - MedCenter{% endblock %}
+{% block page_title %}Mening to'lovlarim{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">Jami summa</div>
+            <div class="value text-primary">{{ total_amount|intcomma }}</div>
+            <small class="text-muted">so'm</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">To'langan</div>
+            <div class="value text-success">{{ total_paid|intcomma }}</div>
+            <small class="text-muted">so'm</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">Qarzdorlik</div>
+            <div class="value {% if total_debt > 0 %}text-danger{% else %}text-success{% endif %}">{{ total_debt|intcomma }}</div>
+            <small class="text-muted">so'm</small>
+        </div>
+    </div>
+</div>
+
+<div class="card card-custom p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <select id="status-filter" class="form-select" style="width: 200px;">
+            <option value="">Barcha holat</option>
+            <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>To'lanmagan</option>
+            <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>To'langan</option>
+            <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Qisman</option>
+            <option value="refunded" {% if status_filter == 'refunded' %}selected{% endif %}>Qaytarilgan</option>
+        </select>
+        <span class="text-muted small">Jami: {{ payments|length }} ta</span>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Chek #</th>
+                    <th>Sana</th>
+                    <th>Xizmat</th>
+                    <th class="text-end">Summa</th>
+                    <th class="text-end">To'langan</th>
+                    <th class="text-end">Qoldiq</th>
+                    <th>Usul</th>
+                    <th>Holat</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for pay in payments %}
+            <tr>
+                <td><small class="fw-bold text-primary">{{ pay.receipt_number }}</small></td>
+                <td>{{ pay.created_at|date:"d.m.Y" }}</td>
+                <td>{{ pay.service.name|default:"-" }}</td>
+                <td class="text-end"><strong>{{ pay.amount|intcomma }}</strong> <small class="text-muted">so'm</small></td>
+                <td class="text-end text-success">{{ pay.paid_amount|intcomma }} <small class="text-muted">so'm</small></td>
+                <td class="text-end {% if pay.remaining > 0 %}text-danger{% endif %}">
+                    {{ pay.remaining|intcomma }} <small class="text-muted">so'm</small>
+                </td>
+                <td>
+                    {% if pay.method == 'cash' %}
+                    <small><i class="bi bi-cash"></i> Naqd</small>
+                    {% elif pay.method == 'card' %}
+                    <small><i class="bi bi-credit-card"></i> Karta</small>
+                    {% else %}
+                    <small><i class="bi bi-bank"></i> O'tkazma</small>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if pay.status == 'pending' %}
+                    <span class="badge bg-warning text-dark">To'lanmagan</span>
+                    {% elif pay.status == 'paid' %}
+                    <span class="badge bg-success">To'langan</span>
+                    {% elif pay.status == 'partial' %}
+                    <span class="badge bg-info">Qisman</span>
+                    {% elif pay.status == 'refunded' %}
+                    <span class="badge bg-secondary">Qaytarilgan</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="8" class="text-center text-muted py-4">
+                <i class="bi bi-inbox" style="font-size: 2rem;"></i><br>
+                To'lovlar topilmadi
+            </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('status-filter').addEventListener('change', function() {
+    const status = this.value;
+    let url = '{% url "my_payments" %}';
+    if (status) url += '?status=' + status;
+    window.location.href = url;
+});
+</script>
+{% endblock %}

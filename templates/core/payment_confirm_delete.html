@@ -1,0 +1,32 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}To'lovni o'chirish - MedCenter{% endblock %}
+{% block page_title %}To'lovni o'chirish{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card card-custom p-4">
+            <div class="text-center mb-4">
+                <i class="bi bi-exclamation-triangle text-danger" style="font-size: 3rem;"></i>
+                <h5 class="mt-2">Haqiqatan ham o'chirmoqchimisiz?</h5>
+            </div>
+            <div class="p-3 rounded mb-4" style="background: var(--bg-secondary, #f8f9fa);">
+                <div class="row g-2">
+                    <div class="col-6"><small class="text-muted">Chek:</small><br><strong>{{ payment.receipt_number }}</strong></div>
+                    <div class="col-6"><small class="text-muted">Bemor:</small><br><strong>{{ payment.patient.full_name }}</strong></div>
+                    <div class="col-6"><small class="text-muted">Summa:</small><br><strong>{{ payment.amount|intcomma }} so'm</strong></div>
+                    <div class="col-6"><small class="text-muted">Holat:</small><br><strong>{{ payment.get_status_display }}</strong></div>
+                </div>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="d-flex gap-2 justify-content-center">
+                    <a href="{% url 'payment_detail' payment.pk %}" class="btn btn-secondary">Bekor qilish</a>
+                    <button type="submit" class="btn btn-danger"><i class="bi bi-trash"></i> O'chirish</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

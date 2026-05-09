@@ -1,0 +1,45 @@
+{% extends "core/base.html" %}
+{% block title %}{{ title }} - MedCenter{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card card-custom p-4">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Bemor *</label>
+                        {{ form.patient }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Shifokor *</label>
+                        {{ form.doctor }}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Xizmat</label>
+                        {{ form.service }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Sana *</label>
+                        {{ form.date }}
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">Vaqt *</label>
+                        {{ form.time }}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Izoh</label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Saqlash</button>
+                    <a href="{% url 'appointment_list' %}" class="btn btn-outline-secondary">Bekor qilish</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

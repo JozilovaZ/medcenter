@@ -1,0 +1,39 @@
+{% extends "core/base.html" %}
+{% block title %}Tibbiy kartam - MedCenter{% endblock %}
+{% block page_title %}Tibbiy kartam{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        {% for record in records %}
+        <div class="card card-custom p-3 mb-3">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <strong><i class="bi bi-calendar"></i> {{ record.created_at|date:"d.m.Y H:i" }}</strong>
+                <span class="badge bg-info">Dr. {{ record.doctor.full_name }}</span>
+            </div>
+            <div class="mb-2">
+                <span class="text-muted">Tashxis:</span>
+                <p class="mb-1 fw-bold">{{ record.diagnosis }}</p>
+            </div>
+            {% if record.prescription %}
+            <div class="mb-2">
+                <span class="text-muted">Retsept:</span>
+                <p class="mb-1">{{ record.prescription }}</p>
+            </div>
+            {% endif %}
+            {% if record.notes %}
+            <div>
+                <span class="text-muted">Izoh:</span>
+                <p class="mb-0">{{ record.notes }}</p>
+            </div>
+            {% endif %}
+        </div>
+        {% empty %}
+        <div class="card card-custom p-5 text-center">
+            <i class="bi bi-file-medical fs-1 text-muted"></i>
+            <p class="text-muted mt-2">Tibbiy yozuvlar topilmadi</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

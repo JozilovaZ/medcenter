@@ -1,0 +1,133 @@
+{% load humanize %}
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+    <meta charset="UTF-8">
+    <title>Chek #{{ payment.receipt_number }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Courier New', monospace; background: #fff; color: #000; }
+        .receipt {
+            width: 300px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 2px dashed #ccc;
+        }
+        .header { text-align: center; margin-bottom: 15px; border-bottom: 1px dashed #000; padding-bottom: 10px; }
+        .header h2 { font-size: 18px; margin-bottom: 5px; }
+        .header p { font-size: 11px; color: #555; }
+        .info { margin-bottom: 10px; }
+        .info .row { display: flex; justify-content: space-between; padding: 3px 0; font-size: 12px; }
+        .info .label { color: #666; }
+        .divider { border-top: 1px dashed #000; margin: 10px 0; }
+        .total { font-size: 16px; font-weight: bold; text-align: center; padding: 10px 0; }
+        .total .amount { font-size: 22px; }
+        .status { text-align: center; padding: 8px; margin: 10px 0; font-weight: bold; font-size: 14px; border: 2px solid; border-radius: 5px; }
+        .status.paid { color: #198754; border-color: #198754; }
+        .status.pending { color: #dc3545; border-color: #dc3545; }
+        .status.partial { color: #0dcaf0; border-color: #0dcaf0; }
+        .status.refunded { color: #6c757d; border-color: #6c757d; }
+        .footer { text-align: center; font-size: 10px; color: #999; margin-top: 15px; padding-top: 10px; border-top: 1px dashed #000; }
+        @media print {
+            body { margin: 0; }
+            .receipt { border: none; margin: 0; }
+            .no-print { display: none !important; }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print" style="text-align: center; padding: 15px; background: #f0f0f0;">
+        <button onclick="window.print()" style="padding: 10px 30px; font-size: 16px; cursor: pointer; background: #0d6efd; color: #fff; border: none; border-radius: 5px;">
+            Chop etish
+        </button>
+        <button onclick="window.close()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; background: #6c757d; color: #fff; border: none; border-radius: 5px; margin-left: 10px;">
+            Yopish
+        </button>
+    </div>
+
+    <div class="receipt">
+        <div class="header">
+            <h2>MedCenter</h2>
+            <p>Tibbiyot markazi</p>
+            <p>{{ payment.created_at|date:"d.m.Y H:i" }}</p>
+        </div>
+
+        <div class="info">
+            <div class="row">
+                <span class="label">Chek raqami:</span>
+                <span><strong>{{ payment.receipt_number }}</strong></span>
+            </div>
+            <div class="row">
+                <span class="label">Bemor:</span>
+                <span>{{ payment.patient.full_name }}</span>
+            </div>
+            <div class="row">
+                <span class="label">Telefon:</span>
+                <span>{{ payment.patient.phone }}</span>
+            </div>
+            {% if payment.service %}
+            <div class="row">
+                <span class="label">Xizmat:</span>
+                <span>{{ payment.service.name }}</span>
+            </div>
+            {% endif %}
+            {% if payment.appointment %}
+            <div class="row">
+                <span class="label">Shifokor:</span>
+                <span>Dr. {{ payment.appointment.doctor.full_name }}</span>
+            </div>
+            <div class="row">
+                <span class="label">Qabul sanasi:</span>
+                <span>{{ payment.appointment.date|date:"d.m.Y" }}</span>
+            </div>
+            {% endif %}
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="info">
+            <div class="row">
+                <span class="label">Jami summa:</span>
+                <span>{{ payment.amount|intcomma }} so'm</span>
+            </div>
+            <div class="row">
+                <span class="label">To'langan:</span>
+                <span>{{ payment.paid_amount|intcomma }} so'm</span>
+            </div>
+            <div class="row">
+                <span class="label">Qoldiq:</span>
+                <span>{{ payment.remaining|intcomma }} so'm</span>
+            </div>
+            <div class="row">
+                <span class="label">To'lov usuli:</span>
+                <span>{{ payment.get_method_display }}</span>
+            </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="total">
+            {% if payment.remaining > 0 %}
+            Qoldiq: <div class="amount">{{ payment.remaining|intcomma }} so'm</div>
+            {% else %}
+            <div class="amount">{{ payment.paid_amount|intcomma }} so'm</div>
+            {% endif %}
+        </div>
+
+        <div class="status {{ payment.status }}">
+            {{ payment.get_status_display|upper }}
+        </div>
+
+        {% if payment.paid_at %}
+        <div style="text-align: center; font-size: 11px; color: #666;">
+            To'langan: {{ payment.paid_at|date:"d.m.Y H:i" }}
+        </div>
+        {% endif %}
+
+        <div class="footer">
+            <p>Xizmatimizdan foydalanganingiz uchun rahmat!</p>
+            <p>MedCenter &copy; {{ payment.created_at|date:"Y" }}</p>
+        </div>
+    </div>
+</body>
+</html>

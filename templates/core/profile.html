@@ -1,0 +1,337 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}Profil - MedCenter{% endblock %}
+{% block page_title %}Mening profilim{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <!-- Profile Card (chap tomon - faqat asosiy) -->
+    <div class="col-md-4">
+        <div class="card card-custom p-4">
+            <div class="text-center mb-3 position-relative">
+                <div class="rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 90px; height: 90px; background: #e8f0fe;">
+                    <i class="bi bi-person fs-1" style="color: #0d6efd;"></i>
+                </div>
+                <button class="btn btn-sm position-absolute" style="top: 0; right: 0; background: #e8f0fe; color: #0d6efd;" data-bs-toggle="modal" data-bs-target="#editProfileModal" title="Profilni tahrirlash">
+                    <i class="bi bi-pencil-square"></i>
+                </button>
+                <h5 class="mt-3 mb-1">{{ profile_user.get_full_name|default:profile_user.username }}</h5>
+                <span class="badge" style="background: #0d6efd; color: #fff; font-size: 0.8rem;">{{ profile_user.get_role_display }}</span>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- O'ng tomon -->
+    <div class="col-md-8">
+        <!-- Shaxsiy ma'lumotlar -->
+        <div class="card card-custom p-4 mb-3">
+            <h6 class="mb-3"><i class="bi bi-person-lines-fill" style="color: #0d6efd;"></i> Shaxsiy ma'lumotlar</h6>
+            <table class="table mb-0" style="box-shadow: none;">
+                <tbody>
+                    <tr>
+                        <td style="background: #f0f4ff; width: 40%; color: #6c757d;">Ism</td>
+                        <td style="background: #f0f4ff;"><strong>{{ profile_user.first_name|default:"-" }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="color: #6c757d;">Familiya</td>
+                        <td><strong>{{ profile_user.last_name|default:"-" }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="background: #f0f4ff; color: #6c757d;">Telefon</td>
+                        <td style="background: #f0f4ff;"><strong>{{ profile_user.phone|default:"-" }}</strong></td>
+                    </tr>
+                    {% if profile_user.role == 'patient' and patient %}
+                    <tr>
+                        <td style="color: #6c757d;">Jinsi</td>
+                        <td><strong>{{ patient.get_gender_display }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="background: #f0f4ff; color: #6c757d;">Jami tashriflar</td>
+                        <td style="background: #f0f4ff;"><strong>{{ patient.total_visits }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="color: #6c757d;">Kelmagan</td>
+                        <td><strong>{{ patient.no_show_count }}</strong></td>
+                    </tr>
+                    {% if patient.address %}
+                    <tr>
+                        <td style="background: #f0f4ff; color: #6c757d;">Manzil</td>
+                        <td style="background: #f0f4ff;"><strong>{{ patient.address }}</strong></td>
+                    </tr>
+                    {% endif %}
+                    {% endif %}
+                    {% if profile_user.role == 'doctor' and doctor %}
+                    <tr>
+                        <td style="color: #6c757d;">Mutaxassislik</td>
+                        <td><strong>{{ doctor.specialty }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="background: #f0f4ff; color: #6c757d;">Xona</td>
+                        <td style="background: #f0f4ff;"><strong>{{ doctor.room_number|default:"-" }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="color: #6c757d;">Ish vaqti</td>
+                        <td><strong>{{ doctor.work_start|time:"H:i" }} - {{ doctor.work_end|time:"H:i" }}</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="background: #f0f4ff; color: #6c757d;">Qabul vaqti</td>
+                        <td style="background: #f0f4ff;"><strong>{{ doctor.avg_appointment_minutes }} daqiqa</strong></td>
+                    </tr>
+                    <tr>
+                        <td style="color: #6c757d;">Reyting</td>
+                        <td>
+                            <strong>
+                            {% for i in "12345" %}
+                            <i class="bi {% if forloop.counter <= doctor.rating %}bi-star-fill{% else %}bi-star{% endif %}" style="color: #0d6efd; font-size: 0.85rem;"></i>
+                            {% endfor %}
+                            ({{ doctor.rating }})
+                            </strong>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Stats -->
+        <div class="row g-3 mb-3">
+            {% if profile_user.role == 'doctor' %}
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ total_appointments }}</div>
+                    <div class="label">Jami qabullar</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ completed_appointments }}</div>
+                    <div class="label">Yakunlangan</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ total_patients }}</div>
+                    <div class="label">Bemorlar</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ month_appointments }}</div>
+                    <div class="label">Oylik qabullar</div>
+                </div>
+            </div>
+
+            {% elif profile_user.role == 'patient' %}
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ total_appointments }}</div>
+                    <div class="label">Jami qabullar</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ completed_appointments }}</div>
+                    <div class="label">Yakunlangan</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ total_paid|intcomma }}</div>
+                    <div class="label">To'langan</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ pending_payments|intcomma }}</div>
+                    <div class="label">Qarzdorlik</div>
+                </div>
+            </div>
+
+            {% elif profile_user.role == 'superuser' %}
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ total_patients }}</div>
+                    <div class="label">Bemorlar</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ total_doctors }}</div>
+                    <div class="label">Shifokorlar</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ month_appointments }}</div>
+                    <div class="label">Oylik qabullar</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="stat-card text-center">
+                    <div class="value" style="color: #0d6efd;">{{ month_revenue|intcomma }}</div>
+                    <div class="label">Oylik daromad</div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Recent Appointments -->
+        {% if recent_appointments %}
+        <div class="card card-custom p-4 mb-3">
+            <h6 class="mb-3"><i class="bi bi-clock-history" style="color: #0d6efd;"></i> Oxirgi qabullar</h6>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Sana</th>
+                            <th>Vaqt</th>
+                            {% if profile_user.role == 'doctor' %}
+                            <th>Bemor</th>
+                            {% else %}
+                            <th>Shifokor</th>
+                            {% endif %}
+                            <th>Xizmat</th>
+                            <th>Holat</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {% for apt in recent_appointments %}
+                    <tr>
+                        <td>{{ apt.date }}</td>
+                        <td>{{ apt.time|time:"H:i" }}</td>
+                        {% if profile_user.role == 'doctor' %}
+                        <td>{{ apt.patient.full_name }}</td>
+                        {% else %}
+                        <td>Dr. {{ apt.doctor.full_name }}</td>
+                        {% endif %}
+                        <td>{{ apt.service.name|default:"-" }}</td>
+                        <td><span class="badge badge-{{ apt.status }}">{{ apt.get_status_display }}</span></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Doctor Revenue -->
+        {% if profile_user.role == 'doctor' %}
+        <div class="card card-custom p-4">
+            <h6 class="mb-3"><i class="bi bi-cash-stack" style="color: #0d6efd;"></i> Daromad statistikasi</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 rounded text-center" style="background: #f0f4ff;">
+                        <div style="font-size: 0.8rem; color: #6c757d;">Jami daromad</div>
+                        <div style="font-size: 1.4rem; font-weight: 700; color: #0d6efd;">{{ total_revenue|intcomma }} so'm</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded text-center" style="background: #e8f0fe;">
+                        <div style="font-size: 0.8rem; color: #6c757d;">Oylik daromad</div>
+                        <div style="font-size: 1.4rem; font-weight: 700; color: #0d6efd;">{{ month_revenue|intcomma }} so'm</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Patient Medical Records -->
+        {% if profile_user.role == 'patient' and recent_records %}
+        <div class="card card-custom p-4">
+            <h6 class="mb-3"><i class="bi bi-file-medical" style="color: #0d6efd;"></i> Oxirgi tibbiy yozuvlar</h6>
+            {% for record in recent_records %}
+            <div class="p-3 mb-2 rounded" style="background: {% cycle '#f0f4ff' '#fff' %};">
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <strong style="font-size: 0.9rem;">{{ record.created_at|date:"d.m.Y H:i" }}</strong>
+                    <span style="color: #0d6efd; font-size: 0.85rem;">Dr. {{ record.doctor.full_name }}</span>
+                </div>
+                <div style="font-size: 0.88rem;"><strong>Tashxis:</strong> {{ record.diagnosis }}</div>
+                {% if record.prescription %}
+                <div style="font-size: 0.88rem;"><strong>Retsept:</strong> {{ record.prescription }}</div>
+                {% endif %}
+                {% if record.notes %}
+                <div style="font-size: 0.88rem; color: #6c757d;">{{ record.notes }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
+        <!-- Superuser stats -->
+        {% if profile_user.role == 'superuser' %}
+        <div class="card card-custom p-4">
+            <h6 class="mb-3"><i class="bi bi-bar-chart" style="color: #0d6efd;"></i> Umumiy statistika</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="p-3 rounded text-center" style="background: #f0f4ff;">
+                        <div style="font-size: 0.8rem; color: #6c757d;">Jami daromad</div>
+                        <div style="font-size: 1.4rem; font-weight: 700; color: #0d6efd;">{{ total_revenue|intcomma }} so'm</div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="p-3 rounded text-center" style="background: #e8f0fe;">
+                        <div style="font-size: 0.8rem; color: #6c757d;">Jami qabullar</div>
+                        <div style="font-size: 1.4rem; font-weight: 700; color: #0d6efd;">{{ total_appointments }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content" style="border: none; border-radius: 12px;">
+            <div class="modal-header" style="background: #0d6efd; color: #fff; border-radius: 12px 12px 0 0;">
+                <h6 class="modal-title"><i class="bi bi-pencil-square"></i> Profilni tahrirlash</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <label class="form-label" style="font-size: 0.85rem; color: #6c757d;">Ism</label>
+                            <input type="text" name="first_name" class="form-control" value="{{ profile_user.first_name }}" style="border-color: #e8f0fe;">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" style="font-size: 0.85rem; color: #6c757d;">Familiya</label>
+                            <input type="text" name="last_name" class="form-control" value="{{ profile_user.last_name }}" style="border-color: #e8f0fe;">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" style="font-size: 0.85rem; color: #6c757d;">Telefon</label>
+                            <input type="text" name="phone" class="form-control" value="{{ profile_user.phone }}" style="border-color: #e8f0fe;">
+                        </div>
+                        {% if profile_user.role == 'patient' and patient %}
+                        <div class="col-6">
+                            <label class="form-label" style="font-size: 0.85rem; color: #6c757d;">Jinsi</label>
+                            <select name="gender" class="form-select" style="border-color: #e8f0fe;">
+                                <option value="male" {% if patient.gender == 'male' %}selected{% endif %}>Erkak</option>
+                                <option value="female" {% if patient.gender == 'female' %}selected{% endif %}>Ayol</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label" style="font-size: 0.85rem; color: #6c757d;">Tug'ilgan sana</label>
+                            <input type="date" name="birth_date" class="form-control" value="{{ patient.birth_date|date:'Y-m-d' }}" style="border-color: #e8f0fe;">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label" style="font-size: 0.85rem; color: #6c757d;">Manzil</label>
+                            <input type="text" name="address" class="form-control" value="{{ patient.address }}" style="border-color: #e8f0fe;">
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid #e8f0fe;">
+                    <button type="button" class="btn" style="background: #f0f4ff; color: #0d6efd;" data-bs-dismiss="modal">Bekor qilish</button>
+                    <button type="submit" class="btn" style="background: #0d6efd; color: #fff;">
+                        <i class="bi bi-check-lg"></i> Saqlash
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

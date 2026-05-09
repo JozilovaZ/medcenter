@@ -1,0 +1,83 @@
+{% extends "core/base.html" %}
+{% block title %}Qabullar - MedCenter{% endblock %}
+{% block page_title %}Qabullar ro'yxati{% endblock %}
+
+{% block content %}
+<div class="card card-custom p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="d-flex gap-2 align-items-center">
+            <input type="date" id="date-filter" class="form-control" value="{{ date_filter }}" style="width: 180px;">
+            <select id="status-filter" class="form-select" style="width: 180px;">
+                <option value="">Barcha holatlar</option>
+                <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Rejalashtirilgan</option>
+                <option value="waiting" {% if status_filter == 'waiting' %}selected{% endif %}>Kutmoqda</option>
+                <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>Qabulda</option>
+                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Yakunlangan</option>
+                <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Bekor qilingan</option>
+            </select>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{% url 'quick_appointment' %}" class="btn btn-warning"><i class="bi bi-lightning-charge"></i> Tez qabul</a>
+            <a href="{% url 'appointment_create' %}" class="btn btn-primary"><i class="bi bi-calendar-plus"></i> Yangi qabul</a>
+        </div>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr><th>Vaqt</th><th>Bemor</th><th>Shifokor</th><th>Xizmat</th><th>Holat</th><th>Amallar</th></tr>
+            </thead>
+            <tbody>
+            {% for apt in appointments %}
+            <tr>
+                <td><strong>{{ apt.time|time:"H:i" }}</strong></td>
+                <td><a href="{% url 'patient_detail' apt.patient.pk %}">{{ apt.patient.full_name }}</a></td>
+                <td>Dr. {{ apt.doctor.full_name }}</td>
+                <td>{{ apt.service.name|default:"-" }}</td>
+                <td><span class="badge badge-{{ apt.status }}">{{ apt.get_status_display }}</span></td>
+                <td>
+                    <div class="dropdown">
+                        <button class="btn btn-sm btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown">Amal</button>
+                        <ul class="dropdown-menu">
+                            {% if apt.status == 'scheduled' %}
+                            <li><a class="dropdown-item" href="{% url 'queue_add' apt.pk %}"><i class="bi bi-card-list"></i> Navbatga qo'shish</a></li>
+                            <li><a class="dropdown-item" href="{% url 'appointment_status_update' apt.pk 'waiting' %}"><i class="bi bi-hourglass"></i> Kutmoqda</a></li>
+                            {% endif %}
+                            {% if apt.status == 'waiting' %}
+                            <li><a class="dropdown-item" href="{% url 'appointment_status_update' apt.pk 'in_progress' %}"><i class="bi bi-play"></i> Qabulni boshlash</a></li>
+                            {% endif %}
+                            {% if apt.status == 'in_progress' %}
+                            <li><a class="dropdown-item" href="{% url 'appointment_status_update' apt.pk 'completed' %}"><i class="bi bi-check"></i> Yakunlash</a></li>
+                            {% endif %}
+                            <li><a class="dropdown-item text-danger" href="{% url 'appointment_status_update' apt.pk 'cancelled' %}"><i class="bi bi-x"></i> Bekor qilish</a></li>
+                            <li><a class="dropdown-item text-warning" href="{% url 'appointment_status_update' apt.pk 'no_show' %}"><i class="bi bi-person-x"></i> Kelmadi</a></li>
+                        </ul>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="6" class="text-center text-muted">Qabullar topilmadi</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('date-filter').addEventListener('change', function() {
+    applyFilters();
+});
+document.getElementById('status-filter').addEventListener('change', function() {
+    applyFilters();
+});
+function applyFilters() {
+    const date = document.getElementById('date-filter').value;
+    const status = document.getElementById('status-filter').value;
+    let url = '{% url "appointment_list" %}?date=' + date;
+    if (status) url += '&status=' + status;
+    window.location.href = url;
+}
+</script>
+{% endblock %}

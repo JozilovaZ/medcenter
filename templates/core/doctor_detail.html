@@ -1,0 +1,87 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}Dr. {{ doctor.full_name }} - MedCenter{% endblock %}
+{% block page_title %}Dr. {{ doctor.full_name }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card card-custom p-3">
+            <div class="text-center mb-3">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                    <i class="bi bi-person-badge fs-1 text-primary"></i>
+                </div>
+                <h5 class="mt-2">Dr. {{ doctor.full_name }}</h5>
+                <span class="badge bg-info">{{ doctor.specialty }}</span>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Xona</span><strong>{{ doctor.room_number|default:"-" }}</strong></li>
+                <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Telefon</span><strong>{{ doctor.phone|default:"-" }}</strong></li>
+                <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Ish vaqti</span><strong>{{ doctor.work_start|time:"H:i" }} - {{ doctor.work_end|time:"H:i" }}</strong></li>
+                <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Qabul vaqti</span><strong>{{ doctor.avg_appointment_minutes }} daq.</strong></li>
+                <li class="list-group-item d-flex justify-content-between"><span class="text-muted">Reyting</span><strong class="text-warning">{{ doctor.rating }}</strong></li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Holat</span>
+                    {% if doctor.is_available_now %}<span class="badge bg-success">Bo'sh</span>{% else %}<span class="badge bg-danger">Band</span>{% endif %}
+                </li>
+            </ul>
+            <div class="mt-3">
+                <a href="{% url 'queue_call_next' doctor.pk %}" class="btn btn-success w-100 mb-2">
+                    <i class="bi bi-megaphone"></i> Keyingi bemorni chaqirish
+                </a>
+                <a href="{% url 'doctor_edit' doctor.pk %}" class="btn btn-warning w-100">
+                    <i class="bi bi-pencil"></i> Tahrirlash
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card card-custom p-3 mb-3">
+            <h6><i class="bi bi-calendar-day text-primary"></i> Bugungi qabullar ({{ today_appointments.count }})</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>Vaqt</th><th>Bemor</th><th>Xizmat</th><th>Holat</th><th>Amal</th></tr></thead>
+                    <tbody>
+                    {% for apt in today_appointments %}
+                    <tr>
+                        <td>{{ apt.time|time:"H:i" }}</td>
+                        <td><a href="{% url 'patient_detail' apt.patient.pk %}">{{ apt.patient.full_name }}</a></td>
+                        <td>{{ apt.service.name|default:"-" }}</td>
+                        <td><span class="badge badge-{{ apt.status }}">{{ apt.get_status_display }}</span></td>
+                        <td>
+                            {% if apt.status == 'scheduled' %}
+                            <a href="{% url 'queue_add' apt.pk %}" class="btn btn-sm btn-outline-primary">Navbatga</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-muted text-center">Bugun qabullar yo'q</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card card-custom p-3">
+            <h6><i class="bi bi-clock-history text-info"></i> Oxirgi qabullar</h6>
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>Sana</th><th>Vaqt</th><th>Bemor</th><th>Xizmat</th><th>Holat</th></tr></thead>
+                    <tbody>
+                    {% for apt in all_appointments %}
+                    <tr>
+                        <td>{{ apt.date }}</td>
+                        <td>{{ apt.time|time:"H:i" }}</td>
+                        <td>{{ apt.patient.full_name }}</td>
+                        <td>{{ apt.service.name|default:"-" }}</td>
+                        <td><span class="badge badge-{{ apt.status }}">{{ apt.get_status_display }}</span></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,106 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}Mening qabullarim - MedCenter{% endblock %}
+{% block page_title %}Mening qabullarim{% endblock %}
+
+{% block content %}
+<div class="card card-custom p-3">
+    <!-- Filters -->
+    <div class="d-flex flex-wrap gap-2 mb-3">
+        <form method="get" class="d-flex gap-2 flex-wrap">
+            <input type="date" name="date" class="form-control form-control-sm" value="{{ date_filter }}" style="width:auto;">
+            <select name="status" class="form-select form-select-sm" style="width:auto;">
+                <option value="">Barcha holatlar</option>
+                <option value="scheduled" {% if status_filter == 'scheduled' %}selected{% endif %}>Rejalashtirilgan</option>
+                <option value="waiting" {% if status_filter == 'waiting' %}selected{% endif %}>Kutmoqda</option>
+                <option value="in_progress" {% if status_filter == 'in_progress' %}selected{% endif %}>Qabulda</option>
+                <option value="completed" {% if status_filter == 'completed' %}selected{% endif %}>Yakunlangan</option>
+                <option value="cancelled" {% if status_filter == 'cancelled' %}selected{% endif %}>Bekor qilingan</option>
+                <option value="no_show" {% if status_filter == 'no_show' %}selected{% endif %}>Kelmadi</option>
+            </select>
+            <button type="submit" class="btn btn-sm btn-primary"><i class="bi bi-funnel"></i> Filtrlash</button>
+        </form>
+    </div>
+
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h6 class="mb-0">Jami: {{ appointments.count }} ta qabul</h6>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover">
+            <thead>
+                <tr><th>Vaqt</th><th>Bemor</th><th>Xizmat</th><th>Holat</th><th>Amallar</th></tr>
+            </thead>
+            <tbody>
+            {% for apt in appointments %}
+            <tr>
+                <td>{{ apt.time|time:"H:i" }}</td>
+                <td>
+                    <a href="{% url 'patient_detail' apt.patient.pk %}">{{ apt.patient.full_name }}</a>
+                    <br><small class="text-muted">{{ apt.patient.phone }}</small>
+                </td>
+                <td>{{ apt.service.name|default:"-" }}</td>
+                <td><span class="badge badge-{{ apt.status }}">{{ apt.get_status_display }}</span></td>
+                <td>
+                    {% if apt.status == 'scheduled' %}
+                    <a href="{% url 'doctor_approve_appointment' apt.pk %}" class="btn btn-sm btn-outline-success" title="Tasdiqlash">
+                        <i class="bi bi-check-lg"></i>
+                    </a>
+                    <a href="{% url 'doctor_reject_appointment' apt.pk %}" class="btn btn-sm btn-outline-danger" title="Bekor qilish">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                    {% elif apt.status == 'in_progress' %}
+                    <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#recordModal{{ apt.pk }}" title="Tashxis yozish">
+                        <i class="bi bi-file-medical"></i>
+                    </button>
+                    <a href="{% url 'appointment_status_update' apt.pk 'completed' %}" class="btn btn-sm btn-outline-success" title="Yakunlash">
+                        <i class="bi bi-check-circle"></i>
+                    </a>
+                    {% elif apt.status == 'waiting' %}
+                    <a href="{% url 'appointment_status_update' apt.pk 'in_progress' %}" class="btn btn-sm btn-outline-primary" title="Qabulni boshlash">
+                        <i class="bi bi-play-circle"></i>
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+
+            {% if apt.status == 'in_progress' %}
+            <div class="modal fade" id="recordModal{{ apt.pk }}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Tibbiy yozuv - {{ apt.patient.full_name }}</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <form method="post" action="{% url 'doctor_write_record' apt.pk %}">
+                            {% csrf_token %}
+                            <div class="modal-body">
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Tashxis *</label>
+                                    <textarea name="diagnosis" class="form-control" rows="3" required></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Retsept</label>
+                                    <textarea name="prescription" class="form-control" rows="3"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-bold">Izoh</label>
+                                    <textarea name="notes" class="form-control" rows="2"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                                <button type="submit" class="btn btn-primary">Saqlash</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            {% empty %}
+            <tr><td colspan="5" class="text-center text-muted">Qabullar topilmadi</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

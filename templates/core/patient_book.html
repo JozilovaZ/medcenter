@@ -1,0 +1,313 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}Navbatga yozilish - MedCenter{% endblock %}
+{% block page_title %}Navbatga yozilish{% endblock %}
+
+{% block extra_css %}
+<style>
+    .time-slot {
+        display: inline-block;
+        padding: 8px 16px;
+        margin: 4px;
+        border: 2px solid #e9ecef;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        font-weight: 500;
+        font-size: 0.9rem;
+    }
+    .time-slot:hover:not(.busy) { border-color: #0d6efd; background: #e7f0ff; }
+    .time-slot.selected { border-color: #0d6efd; background: #0d6efd; color: #fff; }
+    .time-slot.busy {
+        border-color: #dc3545; background: #ffe6e6; color: #dc3545;
+        cursor: not-allowed; text-decoration: line-through;
+    }
+    .doctor-select-card {
+        cursor: pointer;
+        transition: all 0.2s;
+        border: 2px solid #e8f0fe;
+        border-radius: 12px;
+    }
+    .doctor-select-card:hover { border-color: #0d6efd; box-shadow: 0 4px 12px rgba(13,110,253,0.08); }
+    .doctor-select-card.selected { border-color: #0d6efd; background: #f0f4ff; }
+    .service-pick-card {
+        border: 2px solid #e8f0fe;
+        border-radius: 10px;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #fff;
+    }
+    .service-pick-card:hover { border-color: #0d6efd; background: #f8fbff; }
+    .service-pick-card.selected { border-color: #0d6efd; background: #f0f4ff; }
+    @media (max-width: 576px) {
+        .time-slot { padding: 6px 12px; font-size: 0.85rem; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-10">
+        <div class="card card-custom p-4">
+            <form method="post" id="bookingForm">
+                {% csrf_token %}
+
+                <!-- Step 1: Select Specialty -->
+                <div class="mb-4">
+                    <h6 class="mb-3"><span class="badge bg-primary rounded-circle me-2">1</span> Yo'nalishni (mutaxassislikni) tanlang</h6>
+                    <select class="form-select" id="specialtySelect" required>
+                        <option value="">-- Yo'nalishni tanlang --</option>
+                        {% for sp in specialties %}
+                        <option value="{{ sp.pk }}">{{ sp.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Step 2: Select Doctor -->
+                <div class="mb-4" id="doctorStep" style="display:none;">
+                    <h6 class="mb-3"><span class="badge bg-primary rounded-circle me-2">2</span> Shifokorni tanlang</h6>
+                    <div class="row g-3" id="doctorList">
+                        {% for doctor in doctors %}
+                        <div class="col-md-6 doctor-item" data-specialty-id="{{ doctor.specialty.pk|default:0 }}" style="display:none;">
+                            <div class="card doctor-select-card p-3" data-doctor-id="{{ doctor.pk }}" onclick="selectDoctor({{ doctor.pk }}, '{{ doctor.full_name }}', '{{ doctor.specialty.pk|default:0 }}')">
+                                <div class="d-flex align-items-center">
+                                    <div class="me-3">
+                                        {% if doctor.photo %}
+                                        <img src="{{ doctor.photo.url }}" class="rounded-circle" style="width:48px;height:48px;object-fit:cover;">
+                                        {% else %}
+                                        <div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center" style="width:48px;height:48px;">
+                                            <i class="bi bi-person-badge fs-5 text-primary"></i>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <strong>Dr. {{ doctor.full_name }}</strong>
+                                        <br><span class="badge bg-secondary">{{ doctor.specialty }}</span>
+                                        <small class="text-muted ms-2">
+                                            <i class="bi bi-clock"></i> {{ doctor.work_start|time:"H:i" }}-{{ doctor.work_end|time:"H:i" }}
+                                            | <i class="bi bi-door-open"></i> {{ doctor.room_number|default:"-" }}
+                                        </small>
+                                    </div>
+                                    <div>
+                                        {% if doctor.is_available_now %}
+                                        <span class="badge bg-success">Bo'sh</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Band</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <input type="hidden" name="doctor" id="selectedDoctor" required>
+                </div>
+
+                <!-- Step 3: Select Service -->
+                <div class="mb-4" id="serviceStep" style="display:none;">
+                    <h6 class="mb-3"><span class="badge bg-primary rounded-circle me-2">3</span> Xizmatni tanlang (ixtiyoriy)</h6>
+                    <div id="serviceCardsContainer" class="row g-2">
+                        <p class="text-muted col-12">Shifokor tanlanganda xizmatlar ko'rinadi...</p>
+                    </div>
+                    <input type="hidden" name="service" id="serviceSelect">
+                </div>
+
+                <!-- Step 4: Select Date -->
+                <div class="mb-4">
+                    <h6 class="mb-3"><span class="badge bg-primary rounded-circle me-2">4</span> Sanani tanlang</h6>
+                    <input type="date" name="date" id="dateSelect" class="form-control" min="{{ min_date }}" required>
+                </div>
+
+                <!-- Step 5: Select Time -->
+                <div class="mb-4" id="timeSlotsContainer" style="display:none;">
+                    <h6 class="mb-3"><span class="badge bg-primary rounded-circle me-2">5</span> Vaqtni tanlang</h6>
+                    <div id="timeSlots" class="d-flex flex-wrap">
+                        <p class="text-muted">Avval shifokor va sanani tanlang...</p>
+                    </div>
+                    <input type="hidden" name="time" id="selectedTime" required>
+                </div>
+
+                <!-- Submit -->
+                <div class="text-center mt-4">
+                    <a href="{% url 'patient_dashboard' %}" class="btn btn-outline-secondary me-2">
+                        <i class="bi bi-arrow-left"></i> Orqaga
+                    </a>
+                    <button type="submit" class="btn btn-primary btn-lg px-5" id="submitBtn" disabled>
+                        <i class="bi bi-check-lg"></i> Navbatga yozilish
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let selectedDoctorId = null;
+let selectedDoctorSpecialtyId = null;
+let selectedServiceId = null;
+
+document.getElementById('specialtySelect').addEventListener('change', function() {
+    const spId = this.value;
+    const step = document.getElementById('doctorStep');
+    selectedDoctorId = null;
+    selectedServiceId = null;
+    document.getElementById('selectedDoctor').value = '';
+    document.getElementById('serviceSelect').value = '';
+    document.querySelectorAll('.doctor-select-card').forEach(c => c.classList.remove('selected'));
+    document.getElementById('timeSlotsContainer').style.display = 'none';
+    document.getElementById('selectedTime').value = '';
+    document.getElementById('serviceStep').style.display = 'none';
+    document.getElementById('serviceCardsContainer').innerHTML = '<p class="text-muted col-12">Shifokor tanlanganda xizmatlar ko\'rinadi...</p>';
+
+    if (!spId) { step.style.display = 'none'; checkForm(); return; }
+    step.style.display = 'block';
+
+    let visibleCount = 0;
+    document.querySelectorAll('.doctor-item').forEach(item => {
+        const show = item.dataset.specialtyId === spId;
+        item.style.display = show ? '' : 'none';
+        if (show) visibleCount++;
+    });
+    const list = document.getElementById('doctorList');
+    let empty = document.getElementById('noDoctorsMsg');
+    if (visibleCount === 0) {
+        if (!empty) {
+            empty = document.createElement('p');
+            empty.id = 'noDoctorsMsg';
+            empty.className = 'text-muted col-12';
+            empty.textContent = "Bu yo'nalishda shifokor topilmadi.";
+            list.appendChild(empty);
+        }
+    } else if (empty) { empty.remove(); }
+    checkForm();
+});
+
+function selectDoctor(id, name, spId) {
+    selectedDoctorId = id;
+    selectedDoctorSpecialtyId = spId;
+    document.getElementById('selectedDoctor').value = id;
+    document.querySelectorAll('.doctor-select-card').forEach(c => c.classList.remove('selected'));
+    const card = document.querySelector(`.doctor-select-card[data-doctor-id="${id}"]`);
+    if (card) card.classList.add('selected');
+
+    // Load services for this specialty
+    loadServicesForSpecialty(spId);
+    loadTimeSlots();
+}
+
+function loadServicesForSpecialty(spId) {
+    if (!spId) return;
+    const step = document.getElementById('serviceStep');
+    const container = document.getElementById('serviceCardsContainer');
+    step.style.display = 'block';
+    container.innerHTML = '<div class="col-12 text-muted"><i class="bi bi-arrow-repeat"></i> Xizmatlar yuklanmoqda...</div>';
+    selectedServiceId = null;
+    document.getElementById('serviceSelect').value = '';
+
+    fetch(`/api/specialties/${spId}/services/`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.services.length === 0) {
+                container.innerHTML = '<div class="col-12"><p class="text-muted mb-0"><i class="bi bi-info-circle me-1"></i>Bu yo\'nalishda xizmatlar topilmadi.</p></div>';
+                return;
+            }
+            container.innerHTML = data.services.map(s => `
+                <div class="col-12 col-sm-6">
+                    <div class="service-pick-card" data-svc-id="${s.id}" onclick="selectService(${s.id})">
+                        <div class="d-flex justify-content-between align-items-center gap-2">
+                            <div>
+                                <div class="fw-medium">${escHtml(s.name)}</div>
+                                <small class="text-muted"><i class="bi bi-clock"></i> ${s.duration} daqiqa</small>
+                            </div>
+                            <span class="text-primary fw-semibold flex-shrink-0">${fmtPrice(s.price)} so'm</span>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        });
+}
+
+function selectService(svcId) {
+    if (selectedServiceId === svcId) {
+        selectedServiceId = null;
+        document.getElementById('serviceSelect').value = '';
+        document.querySelectorAll('.service-pick-card').forEach(c => c.classList.remove('selected'));
+        return;
+    }
+    selectedServiceId = svcId;
+    document.getElementById('serviceSelect').value = svcId;
+    document.querySelectorAll('.service-pick-card').forEach(c => c.classList.remove('selected'));
+    const card = document.querySelector(`.service-pick-card[data-svc-id="${svcId}"]`);
+    if (card) card.classList.add('selected');
+}
+
+function loadTimeSlots() {
+    const date = document.getElementById('dateSelect').value;
+    if (!selectedDoctorId || !date) return;
+    document.getElementById('timeSlotsContainer').style.display = 'block';
+    document.getElementById('timeSlots').innerHTML = '<p class="text-muted">Yuklanmoqda...</p>';
+
+    fetch(`/api/doctors/${selectedDoctorId}/schedule/?date=${date}`)
+        .then(r => r.json())
+        .then(data => {
+            const container = document.getElementById('timeSlots');
+            if (data.slots.length === 0) {
+                container.innerHTML = '<p class="text-muted">Bu kunda bo\'sh vaqt yo\'q</p>';
+                return;
+            }
+            container.innerHTML = '';
+            data.slots.forEach(slot => {
+                const el = document.createElement('span');
+                el.className = 'time-slot' + (slot.busy ? ' busy' : '');
+                el.textContent = slot.time;
+                if (!slot.busy) {
+                    el.onclick = function() {
+                        document.querySelectorAll('.time-slot').forEach(s => s.classList.remove('selected'));
+                        el.classList.add('selected');
+                        document.getElementById('selectedTime').value = slot.time;
+                        checkForm();
+                    };
+                }
+                container.appendChild(el);
+            });
+        });
+}
+
+document.getElementById('dateSelect').addEventListener('change', function() {
+    document.getElementById('selectedTime').value = '';
+    loadTimeSlots();
+    checkForm();
+});
+
+function checkForm() {
+    const doctor = document.getElementById('selectedDoctor').value;
+    const date = document.getElementById('dateSelect').value;
+    const time = document.getElementById('selectedTime').value;
+    document.getElementById('submitBtn').disabled = !(doctor && date && time);
+}
+
+// Pre-select doctor from URL param
+const urlParams = new URLSearchParams(window.location.search);
+const preselectedDoctor = urlParams.get('doctor');
+if (preselectedDoctor) {
+    const item = document.querySelector(`.doctor-item .doctor-select-card[data-doctor-id="${preselectedDoctor}"]`);
+    if (item) {
+        const spId = item.closest('.doctor-item').dataset.specialtyId;
+        const sel = document.getElementById('specialtySelect');
+        sel.value = spId;
+        sel.dispatchEvent(new Event('change'));
+        selectDoctor(parseInt(preselectedDoctor), '', spId);
+    }
+}
+
+function escHtml(str) {
+    const d = document.createElement('div'); d.textContent = str || ''; return d.innerHTML;
+}
+function fmtPrice(p) {
+    return parseFloat(p).toLocaleString('uz-UZ');
+}
+</script>
+{% endblock %}

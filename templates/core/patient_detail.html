@@ -1,0 +1,130 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}{{ patient.full_name }} - MedCenter{% endblock %}
+{% block page_title %}Bemor: {{ patient.full_name }}{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <!-- Patient Info Card -->
+    <div class="col-md-4">
+        <div class="card card-custom p-3">
+            <div class="text-center mb-3">
+                <div class="rounded-circle bg-primary bg-opacity-10 d-inline-flex align-items-center justify-content-center" style="width: 80px; height: 80px;">
+                    <i class="bi bi-person fs-1 text-primary"></i>
+                </div>
+                <h5 class="mt-2">{{ patient.full_name }}</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Telefon</span>
+                    <strong>{{ patient.phone }}</strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Jinsi</span>
+                    <strong>{{ patient.get_gender_display }}</strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Yosh</span>
+                    <strong>{{ patient.age|default:"-" }}</strong>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Tashriflar</span>
+                    <span class="badge bg-success">{{ patient.total_visits }}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between">
+                    <span class="text-muted">Kelmagan</span>
+                    <span class="badge {% if patient.no_show_count > 0 %}bg-danger{% else %}bg-secondary{% endif %}">{{ patient.no_show_count }}</span>
+                </li>
+                {% if patient.address %}
+                <li class="list-group-item">
+                    <span class="text-muted">Manzil:</span><br>{{ patient.address }}
+                </li>
+                {% endif %}
+                {% if patient.notes %}
+                <li class="list-group-item">
+                    <span class="text-muted">Izoh:</span><br>{{ patient.notes }}
+                </li>
+                {% endif %}
+            </ul>
+            <div class="mt-3 d-flex gap-2">
+                <a href="{% url 'patient_edit' patient.pk %}" class="btn btn-warning btn-sm"><i class="bi bi-pencil"></i> Tahrirlash</a>
+                <a href="{% url 'quick_appointment' %}" class="btn btn-primary btn-sm"><i class="bi bi-lightning-charge"></i> Tez qabul</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="col-md-8">
+        <div class="card card-custom p-3">
+            <ul class="nav nav-tabs mb-3" role="tablist">
+                <li class="nav-item"><a class="nav-link active" data-bs-toggle="tab" href="#appointments">Qabullar ({{ appointments.count }})</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#payments">To'lovlar ({{ payments.count }})</a></li>
+                <li class="nav-item"><a class="nav-link" data-bs-toggle="tab" href="#records">Tibbiy karta ({{ records.count }})</a></li>
+            </ul>
+
+            <div class="tab-content">
+                <!-- Appointments Tab -->
+                <div class="tab-pane fade show active" id="appointments">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>Sana</th><th>Vaqt</th><th>Shifokor</th><th>Xizmat</th><th>Holat</th></tr></thead>
+                            <tbody>
+                            {% for apt in appointments %}
+                            <tr>
+                                <td>{{ apt.date }}</td>
+                                <td>{{ apt.time|time:"H:i" }}</td>
+                                <td>{{ apt.doctor.full_name }}</td>
+                                <td>{{ apt.service.name|default:"-" }}</td>
+                                <td><span class="badge badge-{{ apt.status }}">{{ apt.get_status_display }}</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-muted text-center">Qabullar yo'q</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Payments Tab -->
+                <div class="tab-pane fade" id="payments">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead><tr><th>Sana</th><th>Xizmat</th><th>Summa</th><th>To'langan</th><th>Holat</th></tr></thead>
+                            <tbody>
+                            {% for pay in payments %}
+                            <tr>
+                                <td>{{ pay.created_at|date:"d.m.Y" }}</td>
+                                <td>{{ pay.service.name|default:"-" }}</td>
+                                <td>{{ pay.amount|intcomma }} so'm</td>
+                                <td>{{ pay.paid_amount|intcomma }} so'm</td>
+                                <td><span class="badge badge-{{ pay.status }}">{{ pay.get_status_display }}</span></td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="5" class="text-muted text-center">To'lovlar yo'q</td></tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Medical Records Tab -->
+                <div class="tab-pane fade" id="records">
+                    {% for record in records %}
+                    <div class="border rounded p-3 mb-2">
+                        <div class="d-flex justify-content-between">
+                            <strong>{{ record.created_at|date:"d.m.Y H:i" }}</strong>
+                            <span class="text-muted">Dr. {{ record.doctor.full_name }}</span>
+                        </div>
+                        <p class="mb-1"><strong>Tashxis:</strong> {{ record.diagnosis }}</p>
+                        {% if record.prescription %}<p class="mb-1"><strong>Retsept:</strong> {{ record.prescription }}</p>{% endif %}
+                        {% if record.notes %}<p class="mb-0"><strong>Izoh:</strong> {{ record.notes }}</p>{% endif %}
+                    </div>
+                    {% empty %}
+                    <p class="text-muted text-center">Tibbiy yozuvlar yo'q</p>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

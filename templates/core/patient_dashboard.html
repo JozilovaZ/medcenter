@@ -1,0 +1,215 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}Bemor paneli - MedCenter{% endblock %}
+{% block page_title %}Xush kelibsiz, {{ patient.full_name }}!{% endblock %}
+
+{% block extra_css %}
+<style>
+    .countdown-card {
+        border-left: 4px solid #0d6efd;
+        transition: all 0.3s;
+    }
+    .countdown-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .countdown-timer {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #0d6efd;
+    }
+    .countdown-urgent {
+        color: #dc3545;
+        animation: pulse 1.5s infinite;
+    }
+    .doctor-card {
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+    .doctor-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- My Queue (if active) -->
+{% if my_queue %}
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-card-list text-warning"></i> Joriy navbatingiz</h6>
+            <div class="row justify-content-center">
+                {% for q in my_queue %}
+                <div class="col-md-6 mb-2">
+                    <div class="p-3 rounded text-center {% if q.status == 'called' %}bg-info bg-opacity-10 border border-info border-2{% else %}bg-warning bg-opacity-10{% endif %}">
+                        <div class="queue-ticket">{{ q.ticket_number }}</div>
+                        <div class="fw-bold">Dr. {{ q.doctor.full_name }}</div>
+                        <small class="text-muted">{{ q.doctor.specialty }} | Xona: {{ q.doctor.room_number }}</small>
+                        <div class="mt-2">
+                            {% if q.status == 'waiting' %}
+                            <span class="badge bg-warning text-dark fs-6">Kutmoqdasiz - Sizdan oldin: {{ q.people_ahead }} kishi</span>
+                            {% elif q.status == 'called' %}
+                            <span class="badge bg-info fs-6 pulse">Sizni chaqirishmoqda! {{ q.doctor.room_number }}-xonaga kiring!</span>
+                            {% elif q.status == 'in_progress' %}
+                            <span class="badge bg-primary fs-6">Qabuldasiz</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Upcoming Appointments with Countdown -->
+{% if upcoming %}
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card card-custom p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="bi bi-clock text-primary"></i> Kelgusi qabullaringiz</h6>
+                <a href="{% url 'patient_book' %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-plus-lg"></i> Yangi qabul
+                </a>
+            </div>
+            <div class="row g-3">
+                {% for item in upcoming %}
+                <div class="col-md-6 col-lg-4">
+                    <div class="card countdown-card p-3">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <strong>Dr. {{ item.appointment.doctor.full_name }}</strong>
+                                <br><small class="text-muted">{{ item.appointment.doctor.specialty }}</small>
+                            </div>
+                            <span class="badge badge-{{ item.appointment.status }}">{{ item.appointment.get_status_display }}</span>
+                        </div>
+                        <div class="mb-2">
+                            <i class="bi bi-calendar3"></i> {{ item.appointment.date }}
+                            <i class="bi bi-clock ms-2"></i> {{ item.appointment.time|time:"H:i" }}
+                        </div>
+                        {% if item.appointment.service %}
+                        <div class="mb-2">
+                            <small class="text-muted"><i class="bi bi-box-seam"></i> {{ item.appointment.service.name }}</small>
+                        </div>
+                        {% endif %}
+                        <div class="mt-2 p-2 rounded" style="background: #f0f4ff;">
+                            <small class="text-muted">Qabulgacha qolgan vaqt:</small>
+                            <div class="countdown-timer {% if item.total_seconds < 3600 %}countdown-urgent{% endif %}" data-target="{{ item.apt_datetime_iso }}">
+                                {{ item.countdown_text }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+
+<!-- Quick Actions + Recent History -->
+<div class="row g-3">
+    <div class="col-md-4">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-lightning-charge text-warning"></i> Tez harakatlar</h6>
+            <div class="d-grid gap-2">
+                <a href="{% url 'patient_book' %}" class="btn btn-primary">
+                    <i class="bi bi-calendar-plus"></i> Navbatga yozilish
+                </a>
+                <a href="{% url 'my_queue' %}" class="btn btn-outline-warning">
+                    <i class="bi bi-card-list"></i> Navbatim
+                </a>
+                <a href="{% url 'my_payments' %}" class="btn btn-outline-success">
+                    <i class="bi bi-credit-card"></i> To'lovlarim
+                </a>
+                <a href="{% url 'my_medical_records' %}" class="btn btn-outline-secondary">
+                    <i class="bi bi-file-medical"></i> Tibbiy kartam
+                </a>
+                <a href="{% url 'chat_list' %}" class="btn btn-outline-primary">
+                    <i class="bi bi-chat-dots"></i> Chatlar
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-clock-history text-info"></i> Oxirgi qabullar</h6>
+            {% if my_recent %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead><tr><th>Sana</th><th>Shifokor</th><th>Xizmat</th><th>Holat</th><th></th></tr></thead>
+                    <tbody>
+                    {% for apt in my_recent %}
+                    <tr>
+                        <td>{{ apt.date }} {{ apt.time|time:"H:i" }}</td>
+                        <td>Dr. {{ apt.doctor.full_name }}</td>
+                        <td>{{ apt.service.name|default:"-" }}</td>
+                        <td><span class="badge badge-{{ apt.status }}">{{ apt.get_status_display }}</span></td>
+                        <td>
+                            {% if apt.status == 'completed' %}
+                            <a href="{% url 'chat_start' apt.doctor.pk %}" class="btn btn-sm btn-outline-primary" title="Shifokor bilan yozishing">
+                                <i class="bi bi-chat-dots"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center mb-0">Hali qabullar yo'q</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Live countdown timer
+function updateCountdowns() {
+    document.querySelectorAll('.countdown-timer[data-target]').forEach(el => {
+        const target = new Date(el.dataset.target);
+        const now = new Date();
+        let diff = Math.floor((target - now) / 1000);
+
+        if (diff <= 0) {
+            el.textContent = "Vaqti keldi!";
+            el.classList.add('countdown-urgent');
+            return;
+        }
+
+        const days = Math.floor(diff / 86400);
+        const hours = Math.floor((diff % 86400) / 3600);
+        const minutes = Math.floor((diff % 3600) / 60);
+        const seconds = diff % 60;
+
+        let text = '';
+        if (days > 0) text += days + ' kun ';
+        if (hours > 0) text += hours + ' soat ';
+        text += minutes + ' daqiqa ' + seconds + ' soniya';
+
+        el.textContent = text;
+
+        if (diff < 3600) {
+            el.classList.add('countdown-urgent');
+        }
+    });
+}
+
+updateCountdowns();
+setInterval(updateCountdowns, 1000);
+
+// Auto-refresh queue every 15 seconds
+{% if my_queue %}
+setTimeout(() => location.reload(), 15000);
+{% endif %}
+</script>
+{% endblock %}

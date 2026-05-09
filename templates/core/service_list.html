@@ -1,0 +1,61 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}Xizmatlar - MedCenter{% endblock %}
+{% block page_title %}Xizmatlar{% endblock %}
+
+{% block content %}
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-box-seam text-primary"></i> Xizmatlar ro'yxati</h6>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead><tr><th>Nomi</th><th>Kategoriya</th><th>Narxi</th><th>Davomiyligi</th></tr></thead>
+                    <tbody>
+                    {% for service in services %}
+                    <tr>
+                        <td><strong>{{ service.name }}</strong></td>
+                        <td><span class="badge bg-info">{{ service.category|default:"-" }}</span></td>
+                        <td><strong>{{ service.price|intcomma }} so'm</strong></td>
+                        <td>{{ service.duration_minutes }} daqiqa</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="4" class="text-muted text-center">Xizmatlar yo'q</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-gift text-success"></i> Paket xizmatlar</h6>
+            {% for pkg in packages %}
+            <div class="border rounded p-3 mb-2">
+                <h6 class="mb-1">{{ pkg.name }}</h6>
+                {% if pkg.description %}<small class="text-muted">{{ pkg.description }}</small>{% endif %}
+                <ul class="list-unstyled mt-2 mb-2">
+                    {% for s in pkg.services.all %}
+                    <li><i class="bi bi-check text-success"></i> {{ s.name }}</li>
+                    {% endfor %}
+                </ul>
+                <div class="d-flex justify-content-between align-items-center">
+                    {% if pkg.discount_percent > 0 %}
+                    <div>
+                        <small class="text-decoration-line-through text-muted">{{ pkg.original_price|intcomma }}</small>
+                        <strong class="text-success ms-1">{{ pkg.total_price|intcomma }} so'm</strong>
+                    </div>
+                    <span class="badge bg-danger">-{{ pkg.discount_percent }}%</span>
+                    {% else %}
+                    <strong>{{ pkg.total_price|intcomma }} so'm</strong>
+                    {% endif %}
+                </div>
+            </div>
+            {% empty %}
+            <p class="text-muted text-center">Paketlar yo'q</p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

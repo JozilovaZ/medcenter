@@ -1,0 +1,182 @@
+{% extends "core/base.html" %}
+{% block title %}Chat - {{ room }}{% endblock %}
+{% block page_title %}
+<a href="{% url 'chat_list' %}" class="text-decoration-none"><i class="bi bi-arrow-left"></i></a>
+{% if request.user.role == 'patient' %}
+Dr. {{ room.doctor.full_name }}
+{% elif request.user.role == 'doctor' %}
+{{ room.patient.full_name }}
+{% else %}
+{{ room.patient.full_name }} - Dr. {{ room.doctor.full_name }}
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    .chat-container {
+        height: calc(100vh - 280px);
+        overflow-y: auto;
+        padding: 15px;
+        background: #f0f2f5;
+        border-radius: 10px;
+    }
+    .message-bubble {
+        max-width: 70%;
+        padding: 10px 14px;
+        border-radius: 16px;
+        margin-bottom: 8px;
+        position: relative;
+        word-wrap: break-word;
+    }
+    .message-mine {
+        background: #0d6efd;
+        color: #fff;
+        margin-left: auto;
+        border-bottom-right-radius: 4px;
+    }
+    .message-other {
+        background: #fff;
+        color: #333;
+        margin-right: auto;
+        border-bottom-left-radius: 4px;
+        box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+    }
+    .message-prescription {
+        border: 2px solid #198754;
+        background: #d1e7dd;
+        color: #0f5132;
+    }
+    .message-prescription.message-mine {
+        background: #198754;
+        color: #fff;
+        border-color: #146c43;
+    }
+    .message-time {
+        font-size: 0.7rem;
+        opacity: 0.7;
+        margin-top: 4px;
+    }
+    .message-sender {
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 2px;
+    }
+    .chat-input-area {
+        background: #fff;
+        border-radius: 0 0 10px 10px;
+        padding: 12px;
+        border-top: 1px solid #e8f0fe;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card card-custom">
+            <!-- Chat messages -->
+            <div class="chat-container" id="chatContainer">
+                {% for msg in chat_messages %}
+                <div class="d-flex {% if msg.sender == request.user %}justify-content-end{% else %}justify-content-start{% endif %}">
+                    <div class="message-bubble {% if msg.sender == request.user %}message-mine{% else %}message-other{% endif %} {% if msg.is_prescription %}message-prescription{% endif %}">
+                        {% if msg.sender != request.user %}
+                        <div class="message-sender">
+                            {{ msg.sender.get_full_name|default:msg.sender.username }}
+                        </div>
+                        {% endif %}
+                        {% if msg.is_prescription %}
+                        <div class="small mb-1"><i class="bi bi-capsule"></i> <strong>Retsept</strong></div>
+                        {% endif %}
+                        <div>{{ msg.text|linebreaksbr }}</div>
+                        <div class="message-time text-end">{{ msg.created_at|time:"H:i" }}</div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="bi bi-chat-dots text-muted" style="font-size:2rem;"></i>
+                    <p class="text-muted mt-2">Hali xabarlar yo'q. Birinchi bo'lib yozing!</p>
+                </div>
+                {% endfor %}
+            </div>
+
+            <!-- Message input -->
+            <div class="chat-input-area">
+                <form method="post" class="d-flex align-items-end gap-2">
+                    {% csrf_token %}
+                    <div class="flex-grow-1">
+                        <textarea name="text" class="form-control" rows="1" placeholder="Xabar yozing..." required
+                            style="border-radius:20px; resize:none;" id="messageInput"></textarea>
+                    </div>
+                    {% if request.user.role == 'doctor' %}
+                    <div class="form-check" title="Retsept sifatida yuborish">
+                        <input type="checkbox" name="is_prescription" class="form-check-input" id="isPrescription">
+                        <label class="form-check-label small" for="isPrescription"><i class="bi bi-capsule"></i></label>
+                    </div>
+                    {% endif %}
+                    <button type="submit" class="btn btn-primary rounded-circle" style="width:42px;height:42px;">
+                        <i class="bi bi-send"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Scroll to bottom
+const container = document.getElementById('chatContainer');
+container.scrollTop = container.scrollHeight;
+
+// Auto-resize textarea
+const input = document.getElementById('messageInput');
+input.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// Submit on Enter (Shift+Enter for new line)
+input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (this.value.trim()) {
+            this.closest('form').submit();
+        }
+    }
+});
+
+// Poll for new messages every 5 seconds
+let lastMsgId = {{ chat_messages.last.pk|default:"0" }};
+function pollMessages() {
+    fetch("{% url 'chat_messages_api' room.pk %}?after=" + lastMsgId)
+        .then(r => r.json())
+        .then(data => {
+            if (data.messages && data.messages.length > 0) {
+                data.messages.forEach(msg => {
+                    if (msg.id > lastMsgId) {
+                        lastMsgId = msg.id;
+                        if (!msg.is_me) {
+                            const div = document.createElement('div');
+                            div.className = 'd-flex justify-content-start';
+                            let prescClass = msg.is_prescription ? ' message-prescription' : '';
+                            let prescLabel = msg.is_prescription ? '<div class="small mb-1"><i class="bi bi-capsule"></i> <strong>Retsept</strong></div>' : '';
+                            div.innerHTML = `
+                                <div class="message-bubble message-other${prescClass}">
+                                    <div class="message-sender">${msg.sender}</div>
+                                    ${prescLabel}
+                                    <div>${msg.text}</div>
+                                    <div class="message-time text-end">${msg.time}</div>
+                                </div>`;
+                            container.appendChild(div);
+                            container.scrollTop = container.scrollHeight;
+                        }
+                    }
+                });
+            }
+        })
+        .catch(() => {});
+}
+setInterval(pollMessages, 5000);
+</script>
+{% endblock %}

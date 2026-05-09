@@ -1,0 +1,369 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}Shifokor paneli - MedCenter{% endblock %}
+{% block page_title %}Shifokor paneli{% endblock %}
+
+{% block content %}
+<!-- Doctor Info & Stats -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="value">{{ total_today }}</div>
+                    <div class="label">Bugungi qabullar</div>
+                </div>
+                <div class="icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="value">{{ waiting_queue.count }}</div>
+                    <div class="label">Navbatda kutmoqda</div>
+                </div>
+                <div class="icon bg-warning bg-opacity-10 text-warning">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="value">{{ completed_today }}</div>
+                    <div class="label">Yakunlangan</div>
+                </div>
+                <div class="icon bg-success bg-opacity-10 text-success">
+                    <i class="bi bi-check-circle"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="value">{{ scheduled_count }}</div>
+                    <div class="label">Tasdiqlanmagan</div>
+                </div>
+                <div class="icon bg-info bg-opacity-10 text-info">
+                    <i class="bi bi-clock-history"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Queue Management -->
+    <div class="col-md-7">
+        <div class="card card-custom p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="bi bi-card-list text-primary"></i> Navbat boshqaruvi</h6>
+                <a href="{% url 'queue_call_next' doctor.pk %}" class="btn btn-sm btn-primary">
+                    <i class="bi bi-megaphone"></i> Keyingisini chaqirish
+                </a>
+            </div>
+
+            {% if called_queue %}
+            <div class="mb-3">
+                {% for q in called_queue %}
+                <div class="alert {% if q.status == 'called' %}alert-info{% else %}alert-primary{% endif %} d-flex justify-content-between align-items-center mb-2">
+                    <div>
+                        <span class="fw-bold fs-5">{{ q.ticket_number }}</span> -
+                        <strong>{{ q.patient.full_name }}</strong>
+                        <span class="badge {% if q.status == 'called' %}bg-info{% else %}bg-primary{% endif %} ms-2">
+                            {{ q.get_status_display }}
+                        </span>
+                    </div>
+                    <div>
+                        {% if q.status == 'called' %}
+                        <a href="{% url 'queue_status_update' q.pk 'in_progress' %}" class="btn btn-sm btn-primary">
+                            <i class="bi bi-play-circle"></i> Qabulni boshlash
+                        </a>
+                        {% elif q.status == 'in_progress' %}
+                        <a href="{% url 'queue_status_update' q.pk 'completed' %}" class="btn btn-sm btn-success">
+                            <i class="bi bi-check-circle"></i> Yakunlash
+                        </a>
+                        {% if q.appointment %}
+                        <button class="btn btn-sm btn-outline-info ms-1" data-bs-toggle="modal" data-bs-target="#recordModal{{ q.appointment.pk }}">
+                            <i class="bi bi-file-medical"></i> Tashxis
+                        </button>
+                        {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if q.appointment and q.status == 'in_progress' %}
+                <!-- Medical Record Modal -->
+                <div class="modal fade" id="recordModal{{ q.appointment.pk }}" tabindex="-1">
+                    <div class="modal-dialog">
+                        <div class="modal-content">
+                            <div class="modal-header">
+                                <h5 class="modal-title">Tibbiy yozuv - {{ q.patient.full_name }}</h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <form method="post" action="{% url 'doctor_write_record' q.appointment.pk %}">
+                                {% csrf_token %}
+                                <div class="modal-body">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Tashxis *</label>
+                                        <textarea name="diagnosis" class="form-control" rows="3" required></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Retsept</label>
+                                        <textarea name="prescription" class="form-control" rows="3"></textarea>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold">Izoh</label>
+                                        <textarea name="notes" class="form-control" rows="2"></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                                    <button type="submit" class="btn btn-primary">Saqlash</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            {% if waiting_queue %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead><tr><th>Navbat</th><th>Bemor</th><th>Joy</th><th>Vaqti</th></tr></thead>
+                    <tbody>
+                    {% for q in waiting_queue %}
+                    <tr>
+                        <td><span class="fw-bold text-primary">{{ q.ticket_number }}</span></td>
+                        <td>{{ q.patient.full_name }}</td>
+                        <td><span class="badge bg-warning text-dark">{{ q.position_in_queue }}-o'rin</span></td>
+                        <td>{{ q.created_at|time:"H:i" }}</td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            {% if not called_queue %}
+            <p class="text-muted text-center mb-0">Navbatda hech kim yo'q</p>
+            {% endif %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Work Schedule Settings -->
+    <div class="col-md-5">
+        <div class="card card-custom p-3 mb-3">
+            <h6 class="mb-3"><i class="bi bi-clock text-success"></i> Ish vaqtlari</h6>
+            <form method="post" action="{% url 'doctor_update_schedule' %}">
+                {% csrf_token %}
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small">Boshlanishi</label>
+                        <input type="time" name="work_start" class="form-control form-control-sm" value="{{ doctor.work_start|time:'H:i' }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Tugashi</label>
+                        <input type="time" name="work_end" class="form-control form-control-sm" value="{{ doctor.work_end|time:'H:i' }}">
+                    </div>
+                </div>
+                <div class="row g-2 mb-2">
+                    <div class="col-6">
+                        <label class="form-label small">Qabul vaqti (daqiqa)</label>
+                        <input type="number" name="avg_appointment_minutes" class="form-control form-control-sm" value="{{ doctor.avg_appointment_minutes }}" min="5" max="120">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small">Xona raqami</label>
+                        <input type="text" name="room_number" class="form-control form-control-sm" value="{{ doctor.room_number }}">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-sm btn-success w-100 mt-1">
+                    <i class="bi bi-check-lg"></i> Saqlash
+                </button>
+            </form>
+        </div>
+
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-info-circle text-primary"></i> Ma'lumotlarim</h6>
+            <div class="mb-2">
+                <small class="text-muted">Ism:</small>
+                <div class="fw-bold">Dr. {{ doctor.full_name }}</div>
+            </div>
+            <div class="mb-2">
+                <small class="text-muted">Mutaxassislik:</small>
+                <div>{{ doctor.specialty }}</div>
+            </div>
+            <div class="mb-2">
+                <small class="text-muted">Xona:</small>
+                <div>{{ doctor.room_number|default:"-" }}</div>
+            </div>
+            <div class="mb-2">
+                <small class="text-muted">Reyting:</small>
+                <div>
+                    {% for i in "12345" %}
+                    <i class="bi {% if forloop.counter <= doctor.rating %}bi-star-fill text-warning{% else %}bi-star text-muted{% endif %}"></i>
+                    {% endfor %}
+                    <small class="text-muted">({{ doctor.rating }})</small>
+                </div>
+            </div>
+            <div>
+                <small class="text-muted">Holat:</small>
+                {% if doctor.is_available_now %}
+                <span class="badge bg-success">Bo'sh</span>
+                {% else %}
+                <span class="badge bg-danger">Band</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tasdiqlanmagan qabullar -->
+<div class="row g-3 mb-4">
+    <div class="col-12">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-clock-history text-warning"></i> Tasdiqlanishi kerak bo'lgan qabullar</h6>
+            {% with scheduled_apts=today_appointments %}
+            {% for apt in scheduled_apts %}
+            {% if apt.status == 'scheduled' %}
+            <div class="d-flex justify-content-between align-items-center p-2 mb-2 rounded" style="background: #fff8e1;">
+                <div>
+                    <strong>{{ apt.patient.full_name }}</strong>
+                    <br><small class="text-muted">{{ apt.date }} | {{ apt.time|time:"H:i" }} | {{ apt.service.name|default:"Xizmat ko'rsatilmagan" }}</small>
+                </div>
+                <div>
+                    <a href="{% url 'doctor_approve_appointment' apt.pk %}" class="btn btn-sm btn-success">
+                        <i class="bi bi-check-lg"></i> Tasdiqlash
+                    </a>
+                    <a href="{% url 'doctor_reject_appointment' apt.pk %}" class="btn btn-sm btn-outline-danger ms-1">
+                        <i class="bi bi-x-lg"></i> Bekor
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% endwith %}
+
+            {% if upcoming_appointments %}
+            <h6 class="mt-3 mb-2"><i class="bi bi-calendar-event text-info"></i> Kelgusi kunlardagi rejalashtirilgan qabullar</h6>
+            {% for apt in upcoming_appointments %}
+            {% if apt.status == 'scheduled' %}
+            <div class="d-flex justify-content-between align-items-center p-2 mb-2 rounded" style="background: #e3f2fd;">
+                <div>
+                    <strong>{{ apt.patient.full_name }}</strong>
+                    <br><small class="text-muted">{{ apt.date }} | {{ apt.time|time:"H:i" }} | {{ apt.service.name|default:"-" }}</small>
+                </div>
+                <div>
+                    <a href="{% url 'doctor_approve_appointment' apt.pk %}" class="btn btn-sm btn-success">
+                        <i class="bi bi-check-lg"></i> Tasdiqlash
+                    </a>
+                    <a href="{% url 'doctor_reject_appointment' apt.pk %}" class="btn btn-sm btn-outline-danger ms-1">
+                        <i class="bi bi-x-lg"></i>
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+            {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Bugungi barcha qabullar -->
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-list-ul text-info"></i> Bugungi barcha qabullar</h6>
+            {% if today_appointments %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead>
+                        <tr><th>Vaqt</th><th>Bemor</th><th>Xizmat</th><th>Holat</th><th>Amallar</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for apt in today_appointments %}
+                    <tr>
+                        <td>{{ apt.time|time:"H:i" }}</td>
+                        <td>
+                            <a href="{% url 'patient_detail' apt.patient.pk %}">{{ apt.patient.full_name }}</a>
+                        </td>
+                        <td>{{ apt.service.name|default:"-" }}</td>
+                        <td><span class="badge badge-{{ apt.status }}">{{ apt.get_status_display }}</span></td>
+                        <td>
+                            {% if apt.status == 'scheduled' %}
+                            <a href="{% url 'doctor_approve_appointment' apt.pk %}" class="btn btn-sm btn-outline-success" title="Tasdiqlash">
+                                <i class="bi bi-check-lg"></i>
+                            </a>
+                            {% elif apt.status == 'in_progress' %}
+                            <button class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#recordModalTable{{ apt.pk }}" title="Tashxis yozish">
+                                <i class="bi bi-file-medical"></i>
+                            </button>
+                            <a href="{% url 'appointment_status_update' apt.pk 'completed' %}" class="btn btn-sm btn-outline-success" title="Yakunlash">
+                                <i class="bi bi-check-circle"></i>
+                            </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+
+                    {% if apt.status == 'in_progress' %}
+                    <div class="modal fade" id="recordModalTable{{ apt.pk }}" tabindex="-1">
+                        <div class="modal-dialog">
+                            <div class="modal-content">
+                                <div class="modal-header">
+                                    <h5 class="modal-title">Tibbiy yozuv - {{ apt.patient.full_name }}</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <form method="post" action="{% url 'doctor_write_record' apt.pk %}">
+                                    {% csrf_token %}
+                                    <div class="modal-body">
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Tashxis *</label>
+                                            <textarea name="diagnosis" class="form-control" rows="3" required></textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Retsept</label>
+                                            <textarea name="prescription" class="form-control" rows="3"></textarea>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label fw-bold">Izoh</label>
+                                            <textarea name="notes" class="form-control" rows="2"></textarea>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Bekor qilish</button>
+                                        <button type="submit" class="btn btn-primary">Saqlash</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center mb-0">Bugun qabullar yo'q</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Auto-refresh every 30 seconds
+setTimeout(() => location.reload(), 30000);
+</script>
+{% endblock %}

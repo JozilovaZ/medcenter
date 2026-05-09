@@ -1,0 +1,202 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+
+{% block title %}Boshqaruv paneli - MedCenter{% endblock %}
+{% block page_title %}Boshqaruv paneli{% endblock %}
+
+{% block content %}
+<!-- Stat Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="value">{{ today_patients }}</div>
+                    <div class="label">Bugungi bemorlar</div>
+                </div>
+                <div class="icon bg-primary bg-opacity-10 text-primary">
+                    <i class="bi bi-people"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="value">{{ today_appointments }}</div>
+                    <div class="label">Bugungi qabullar</div>
+                </div>
+                <div class="icon bg-success bg-opacity-10 text-success">
+                    <i class="bi bi-calendar-check"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="value">{{ waiting_count }}</div>
+                    <div class="label">Navbatda kutmoqda</div>
+                </div>
+                <div class="icon bg-warning bg-opacity-10 text-warning">
+                    <i class="bi bi-hourglass-split"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3 col-6">
+        <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="value">{{ today_revenue|intcomma }}</div>
+                    <div class="label">Bugungi daromad (so'm)</div>
+                </div>
+                <div class="icon bg-info bg-opacity-10 text-info">
+                    <i class="bi bi-cash-stack"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Quick Actions -->
+    <div class="col-md-8">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-lightning-charge text-warning"></i> Tez harakatlar</h6>
+            <div class="d-flex flex-wrap gap-2">
+                <a href="{% url 'quick_appointment' %}" class="btn btn-primary">
+                    <i class="bi bi-lightning-charge"></i> Tez qabul
+                </a>
+                <a href="{% url 'patient_create' %}" class="btn btn-outline-success">
+                    <i class="bi bi-person-plus"></i> Yangi bemor
+                </a>
+                <a href="{% url 'appointment_create' %}" class="btn btn-outline-info">
+                    <i class="bi bi-calendar-plus"></i> Yangi qabul
+                </a>
+                <a href="{% url 'queue_list' %}" class="btn btn-outline-warning">
+                    <i class="bi bi-card-list"></i> Navbat
+                </a>
+                <a href="{% url 'queue_display' %}" class="btn btn-outline-dark" target="_blank">
+                    <i class="bi bi-tv"></i> TV Monitor
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Unpaid -->
+    <div class="col-md-4">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-exclamation-triangle text-danger"></i> To'lanmagan</h6>
+            <div class="d-flex align-items-center justify-content-between">
+                <span class="fs-3 fw-bold text-danger">{{ unpaid_count }}</span>
+                <a href="{% url 'payment_list' %}?status=pending" class="btn btn-sm btn-outline-danger">Ko'rish</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <!-- Active Queue -->
+    <div class="col-md-6">
+        <div class="card card-custom p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="bi bi-card-list text-primary"></i> Joriy navbat</h6>
+                <a href="{% url 'queue_list' %}" class="btn btn-sm btn-outline-primary">Barchasi</a>
+            </div>
+            {% if active_queue %}
+            <div class="table-responsive">
+                <table class="table table-sm">
+                    <thead><tr><th>Navbat</th><th>Bemor</th><th>Shifokor</th><th>Holat</th></tr></thead>
+                    <tbody>
+                    {% for q in active_queue %}
+                    <tr>
+                        <td><span class="fw-bold text-primary">{{ q.ticket_number }}</span></td>
+                        <td>{{ q.patient.full_name }}</td>
+                        <td>{{ q.doctor.full_name }}</td>
+                        <td><span class="badge badge-{{ q.status }}">{{ q.get_status_display }}</span></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center">Navbat bo'sh</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Doctors Status -->
+    <div class="col-md-6">
+        <div class="card card-custom p-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0"><i class="bi bi-person-badge text-success"></i> Shifokorlar holati</h6>
+                <a href="{% url 'doctor_list' %}" class="btn btn-sm btn-outline-success">Barchasi</a>
+            </div>
+            {% for doctor in doctors %}
+            <div class="d-flex justify-content-between align-items-center p-2 mb-1 rounded {% if doctor.is_available_now %}doctor-available{% else %}doctor-busy{% endif %}" style="background: #f8f9fa;">
+                <div>
+                    <strong>Dr. {{ doctor.full_name }}</strong>
+                    <br><small class="text-muted">{{ doctor.specialty }} | Xona: {{ doctor.room_number }}</small>
+                </div>
+                <div class="text-end">
+                    {% if doctor.is_available_now %}
+                    <span class="badge bg-success">Bo'sh</span>
+                    {% else %}
+                    <span class="badge bg-danger">Band</span>
+                    {% endif %}
+                    <br><small>{{ doctor.today_appointments_count }} qabul</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Recent Appointments -->
+<div class="row g-3">
+    <div class="col-md-8">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-clock-history text-info"></i> Bugungi qabullar</h6>
+            {% if recent_appointments %}
+            <div class="table-responsive">
+                <table class="table table-sm table-hover">
+                    <thead><tr><th>Vaqt</th><th>Bemor</th><th>Shifokor</th><th>Xizmat</th><th>Holat</th></tr></thead>
+                    <tbody>
+                    {% for apt in recent_appointments %}
+                    <tr>
+                        <td>{{ apt.time|time:"H:i" }}</td>
+                        <td><a href="{% url 'patient_detail' apt.patient.pk %}">{{ apt.patient.full_name }}</a></td>
+                        <td>{{ apt.doctor.full_name }}</td>
+                        <td>{{ apt.service.name|default:"-" }}</td>
+                        <td><span class="badge badge-{{ apt.status }}">{{ apt.get_status_display }}</span></td>
+                    </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted text-center">Bugun qabullar yo'q</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Weekly Chart -->
+    <div class="col-md-4">
+        <div class="card card-custom p-3">
+            <h6 class="mb-3"><i class="bi bi-bar-chart text-primary"></i> Haftalik statistika</h6>
+            {% for stat in weekly_stats %}
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <small>{{ stat.day }} ({{ stat.date }})</small>
+                <div class="d-flex align-items-center gap-2">
+                    <div style="width: {{ stat.count|default:0 }}0px; max-width: 100px; height: 8px; background: #0d6efd; border-radius: 4px;"></div>
+                    <small class="fw-bold">{{ stat.count }}</small>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

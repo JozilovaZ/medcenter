@@ -1,0 +1,46 @@
+{% extends "core/base.html" %}
+{% block title %}{{ title }} - MedCenter{% endblock %}
+{% block page_title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-8">
+        <div class="card card-custom p-4">
+            <form method="post">
+                {% csrf_token %}
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">F.I.O *</label>
+                        {{ form.full_name }}
+                        {% if form.full_name.errors %}<small class="text-danger">{{ form.full_name.errors.0 }}</small>{% endif %}
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Telefon *</label>
+                        {{ form.phone }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Tug'ilgan sana</label>
+                        {{ form.birth_date }}
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Jinsi</label>
+                        {{ form.gender }}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Manzil</label>
+                        {{ form.address }}
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Izoh</label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+                <div class="mt-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Saqlash</button>
+                    <a href="{% url 'patient_list' %}" class="btn btn-outline-secondary">Bekor qilish</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

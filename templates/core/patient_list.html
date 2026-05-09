@@ -1,0 +1,83 @@
+{% extends "core/base.html" %}
+{% block title %}Bemorlar - MedCenter{% endblock %}
+{% block page_title %}Bemorlar ro'yxati{% endblock %}
+
+{% block content %}
+<div class="card card-custom p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="position-relative search-box" style="width: 400px;">
+            <i class="bi bi-search"></i>
+            <input type="text" id="patient-search" class="form-control" placeholder="Ism yoki telefon orqali qidirish..."
+                   value="{{ query }}" autofocus>
+        </div>
+        <a href="{% url 'patient_create' %}" class="btn btn-primary">
+            <i class="bi bi-person-plus"></i> Yangi bemor
+        </a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover" id="patient-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>F.I.O</th>
+                    <th>Telefon</th>
+                    <th>Jinsi</th>
+                    <th>Yoshi</th>
+                    <th>Tashriflar</th>
+                    <th>Kelmagan</th>
+                    <th>Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for patient in patients %}
+                <tr>
+                    <td>{{ forloop.counter }}</td>
+                    <td><a href="{% url 'patient_detail' patient.pk %}" class="fw-bold text-decoration-none">{{ patient.full_name }}</a></td>
+                    <td><i class="bi bi-telephone"></i> {{ patient.phone }}</td>
+                    <td>{{ patient.get_gender_display }}</td>
+                    <td>{{ patient.age|default:"-" }}</td>
+                    <td><span class="badge bg-success">{{ patient.total_visits }}</span></td>
+                    <td>
+                        {% if patient.no_show_count > 0 %}
+                        <span class="badge bg-danger">{{ patient.no_show_count }}</span>
+                        {% else %}
+                        <span class="text-muted">0</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <a href="{% url 'patient_detail' patient.pk %}" class="btn btn-sm btn-outline-primary"><i class="bi bi-eye"></i></a>
+                        <a href="{% url 'patient_edit' patient.pk %}" class="btn btn-sm btn-outline-warning"><i class="bi bi-pencil"></i></a>
+                    </td>
+                </tr>
+            {% empty %}
+                <tr><td colspan="8" class="text-center text-muted">Bemorlar topilmadi</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('patient-search').addEventListener('input', function() {
+    const query = this.value;
+    if (query.length >= 2) {
+        window.location.href = '{% url "patient_list" %}?q=' + encodeURIComponent(query);
+    } else if (query.length === 0) {
+        window.location.href = '{% url "patient_list" %}';
+    }
+});
+let searchTimeout;
+document.getElementById('patient-search').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => {
+        const query = this.value;
+        if (query.length >= 2 || query.length === 0) {
+            window.location.href = '{% url "patient_list" %}?q=' + encodeURIComponent(query);
+        }
+    }, 500);
+});
+</script>
+{% endblock %}

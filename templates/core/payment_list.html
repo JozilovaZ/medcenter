@@ -1,0 +1,176 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block title %}To'lovlar - MedCenter{% endblock %}
+{% block page_title %}To'lovlar{% endblock %}
+
+{% block content %}
+<div class="row g-3 mb-3">
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">Jami summa</div>
+            <div class="value text-primary">{{ total_amount|intcomma }}</div>
+            <small class="text-muted">so'm</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">To'langan</div>
+            <div class="value text-success">{{ total_paid|intcomma }}</div>
+            <small class="text-muted">so'm</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="label">Qarzdorlik</div>
+            <div class="value text-danger">{{ total_debt|intcomma }}</div>
+            <small class="text-muted">so'm</small>
+        </div>
+    </div>
+</div>
+
+<div class="card card-custom p-3">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <div class="d-flex gap-2 flex-wrap align-items-center">
+            <div class="input-group" style="width: 260px;">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="search-input" class="form-control" placeholder="Qidirish..." value="{{ search_query }}">
+            </div>
+            <input type="date" id="date-filter" class="form-control" value="{{ date_filter }}" style="width: 160px;" title="Boshlanish sanasi">
+            <input type="date" id="date-to" class="form-control" value="{{ date_to }}" style="width: 160px;" title="Tugash sanasi">
+            <select id="status-filter" class="form-select" style="width: 160px;">
+                <option value="">Barcha holat</option>
+                <option value="pending" {% if status_filter == 'pending' %}selected{% endif %}>To'lanmagan</option>
+                <option value="paid" {% if status_filter == 'paid' %}selected{% endif %}>To'langan</option>
+                <option value="partial" {% if status_filter == 'partial' %}selected{% endif %}>Qisman</option>
+                <option value="refunded" {% if status_filter == 'refunded' %}selected{% endif %}>Qaytarilgan</option>
+            </select>
+            <select id="method-filter" class="form-select" style="width: 150px;">
+                <option value="">Barcha usul</option>
+                <option value="cash" {% if method_filter == 'cash' %}selected{% endif %}>Naqd</option>
+                <option value="card" {% if method_filter == 'card' %}selected{% endif %}>Karta</option>
+                <option value="transfer" {% if method_filter == 'transfer' %}selected{% endif %}>O'tkazma</option>
+            </select>
+            {% if search_query or status_filter or method_filter or date_filter or date_to %}
+            <a href="{% url 'payment_list' %}" class="btn btn-outline-secondary btn-sm" title="Tozalash"><i class="bi bi-x-lg"></i></a>
+            {% endif %}
+        </div>
+        <a href="{% url 'payment_create' %}" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Yangi to'lov</a>
+    </div>
+
+    <div class="table-responsive">
+        <table class="table table-hover align-middle">
+            <thead>
+                <tr>
+                    <th>Chek #</th>
+                    <th>Bemor</th>
+                    <th>Xizmat</th>
+                    <th class="text-end">Summa</th>
+                    <th class="text-end">To'langan</th>
+                    <th class="text-end">Qoldiq</th>
+                    <th>Usul</th>
+                    <th>Holat</th>
+                    <th>Sana</th>
+                    <th class="text-center">Amallar</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for pay in payments %}
+            <tr>
+                <td>
+                    <a href="{% url 'payment_detail' pay.pk %}" class="text-decoration-none">
+                        <small class="fw-bold">{{ pay.receipt_number }}</small>
+                    </a>
+                </td>
+                <td><a href="{% url 'patient_detail' pay.patient.pk %}">{{ pay.patient.full_name }}</a></td>
+                <td>{{ pay.service.name|default:"-" }}</td>
+                <td class="text-end"><strong>{{ pay.amount|intcomma }}</strong></td>
+                <td class="text-end text-success">{{ pay.paid_amount|intcomma }}</td>
+                <td class="text-end {% if pay.remaining > 0 %}text-danger{% endif %}">
+                    {{ pay.remaining|intcomma }}
+                </td>
+                <td>
+                    {% if pay.method == 'cash' %}
+                    <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-cash"></i> Naqd</span>
+                    {% elif pay.method == 'card' %}
+                    <span class="badge bg-primary bg-opacity-10 text-primary"><i class="bi bi-credit-card"></i> Karta</span>
+                    {% else %}
+                    <span class="badge bg-info bg-opacity-10 text-info"><i class="bi bi-bank"></i> O'tkazma</span>
+                    {% endif %}
+                </td>
+                <td>
+                    {% if pay.status == 'pending' %}
+                    <span class="badge bg-warning text-dark">To'lanmagan</span>
+                    {% elif pay.status == 'paid' %}
+                    <span class="badge bg-success">To'langan</span>
+                    {% elif pay.status == 'partial' %}
+                    <span class="badge bg-info">Qisman</span>
+                    {% elif pay.status == 'refunded' %}
+                    <span class="badge bg-secondary">Qaytarilgan</span>
+                    {% endif %}
+                </td>
+                <td><small>{{ pay.created_at|date:"d.m.Y H:i" }}</small></td>
+                <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                        <a href="{% url 'payment_detail' pay.pk %}" class="btn btn-outline-primary" title="Ko'rish">
+                            <i class="bi bi-eye"></i>
+                        </a>
+                        {% if pay.status != 'paid' and pay.status != 'refunded' %}
+                        <a href="{% url 'payment_mark_paid' pay.pk %}" class="btn btn-outline-success" title="To'liq to'lash"
+                           onclick="event.preventDefault(); document.getElementById('pay-form-{{ pay.pk }}').submit();">
+                            <i class="bi bi-check-lg"></i>
+                        </a>
+                        <form id="pay-form-{{ pay.pk }}" action="{% url 'payment_mark_paid' pay.pk %}" method="post" style="display:none;">
+                            {% csrf_token %}
+                        </form>
+                        {% endif %}
+                        <a href="{% url 'payment_receipt' pay.pk %}" class="btn btn-outline-secondary" title="Chek" target="_blank">
+                            <i class="bi bi-printer"></i>
+                        </a>
+                    </div>
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="10" class="text-center text-muted py-4">
+                <i class="bi bi-inbox" style="font-size: 2rem;"></i><br>
+                To'lovlar topilmadi
+            </td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <div class="text-muted small mt-2">Jami: {{ payments|length }} ta to'lov</div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('date-filter').addEventListener('change', applyFilters);
+document.getElementById('date-to').addEventListener('change', applyFilters);
+document.getElementById('status-filter').addEventListener('change', applyFilters);
+document.getElementById('method-filter').addEventListener('change', applyFilters);
+
+let searchTimeout;
+document.getElementById('search-input').addEventListener('input', function() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(applyFilters, 500);
+});
+document.getElementById('search-input').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') { e.preventDefault(); applyFilters(); }
+});
+
+function applyFilters() {
+    const params = new URLSearchParams();
+    const date = document.getElementById('date-filter').value;
+    const dateTo = document.getElementById('date-to').value;
+    const status = document.getElementById('status-filter').value;
+    const method = document.getElementById('method-filter').value;
+    const q = document.getElementById('search-input').value.trim();
+    if (date) params.set('date', date);
+    if (dateTo) params.set('date_to', dateTo);
+    if (status) params.set('status', status);
+    if (method) params.set('method', method);
+    if (q) params.set('q', q);
+    window.location.href = '{% url "payment_list" %}?' + params.toString();
+}
+</script>
+{% endblock %}
