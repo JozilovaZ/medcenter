@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(venv\\\\Scripts\\\\python.exe *)",
+      "PowerShell(cd D:\\\\topshiriqlar\\\\loyiha_ishi_X; Get-ChildItem -Name | Where-Object { $_ -notmatch 'venv|__pycache__|\\\\.idea' })",
+      "PowerShell(gh *)",
+      "PowerShell(New-Item *)"
+    ]
+  }
+}
